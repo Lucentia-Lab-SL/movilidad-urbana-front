@@ -1,9 +1,16 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { getAuthUser, logout } from "@/utils/storage";
 import { LogOut } from "lucide-react";
 
+const NAV_ITEMS = [
+  { label: "Mapa", path: "/mapa" },
+  { label: "Rutas", path: "/rutas" },
+  { label: "Zonas", path: "/zonas" },
+];
+
 const Header = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const user = getAuthUser();
 
   const handleLogout = () => {
@@ -13,17 +20,30 @@ const Header = () => {
 
   return (
     <header className="h-16 flex items-center justify-between px-6 bg-card border-b border-border shrink-0">
-      <span className="text-lg font-bold text-foreground tracking-tight">Movilidad Urbana</span>
+      <span
+        onClick={() => navigate("/mapa")}
+        className="text-lg font-bold text-foreground tracking-tight cursor-pointer"
+      >
+        Movilidad Urbana
+      </span>
 
-      <nav className="hidden md:flex items-center gap-6">
-        {["Mapa", "Rutas", "Zonas"].map((label) => (
-          <span
-            key={label}
-            className="text-sm font-medium text-muted-foreground hover:text-accent cursor-pointer transition-colors duration-150"
-          >
-            {label}
-          </span>
-        ))}
+      <nav className="hidden md:flex items-center gap-1">
+        {NAV_ITEMS.map((item) => {
+          const active = location.pathname === item.path;
+          return (
+            <button
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150 ${
+                active
+                  ? "bg-accent/10 text-accent"
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+              }`}
+            >
+              {item.label}
+            </button>
+          );
+        })}
       </nav>
 
       <div className="flex items-center gap-4">
