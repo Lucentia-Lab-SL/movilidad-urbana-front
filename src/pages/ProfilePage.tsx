@@ -26,8 +26,9 @@ const ProfilePage = () => {
   }, [navigate]);
 
   const authUser = getAuthUser();
+  const profileKey = `profile:${authUser}`;
   const [profile, setProfile] = useState<UserProfile>(() => {
-    const saved = loadJSON<UserProfile>("userProfile", DEFAULT_PROFILE);
+    const saved = loadJSON<UserProfile>(profileKey, DEFAULT_PROFILE);
     return {
       ...DEFAULT_PROFILE,
       ...saved,
@@ -40,8 +41,8 @@ const ProfilePage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    saveJSON("userProfile", profile);
-  }, [profile]);
+    saveJSON(profileKey, profile);
+  }, [profile, profileKey]);
 
   const startEdit = () => {
     setDraft(profile);
