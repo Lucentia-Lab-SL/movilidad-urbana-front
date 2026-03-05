@@ -158,6 +158,15 @@ const RoutesPanel = ({ routeResult, onCalculate }: Props) => {
     setDestCoord({ lat: parseFloat(r.lat), lng: parseFloat(r.lon) });
   }, []);
 
+  const getOsrmProfile = (m: TransportMode): string => {
+    switch (m) {
+      case "car": return "driving";
+      case "foot": return "walking";
+      case "bike": return "cycling";
+      default: return "driving";
+    }
+  };
+
   const calculate = async () => {
     if (!originCoord || !destCoord) {
       setError("Selecciona origen y destino de las sugerencias");
@@ -166,8 +175,7 @@ const RoutesPanel = ({ routeResult, onCalculate }: Props) => {
     setError("");
     setCalculating(true);
 
-    const osrmProfile = TRANSPORT_MODES.find((m) => m.id === mode)?.osrm || "car";
-    const profile = osrmProfile === "car" ? "driving" : osrmProfile === "foot" ? "foot" : "cycling";
+    const profile = getOsrmProfile(mode);
 
     try {
       const url = `https://router.project-osrm.org/route/v1/${profile}/${originCoord.lng},${originCoord.lat};${destCoord.lng},${destCoord.lat}?overview=full&geometries=geojson`;
@@ -175,11 +183,13 @@ const RoutesPanel = ({ routeResult, onCalculate }: Props) => {
       const data = await res.json();
 
       if (data.code !== "Ok" || !data.routes?.length) {
-        setError("No se pudo calcular la ruta. Intenta con otras direcciones.");
+        setError("No se ha encontrado una ruta para ese modo");
         return;
       }
 
       const route = data.routes[0];
+      const distKm = Math.round((route.distance / 1000) * 10) / 10;
+      const durMin = Math.round(route.duration / 60);
       const geometry: [number, number][] = route.geometry.coordinates.map(
         (c: [number, number]) => [c[1], c[0]]
       );
@@ -188,11 +198,11 @@ const RoutesPanel = ({ routeResult, onCalculate }: Props) => {
         originCoord,
         destCoord,
         geometry,
-        distance: Math.round((route.distance / 1000) * 10) / 10,
-        duration: Math.round(route.duration / 60),
+        distance: distKm,
+        duration: durMin,
       });
     } catch {
-      setError("Error de conexión con el servicio de rutas.");
+      setError("No se ha encontrado una ruta para ese modo");
     } finally {
       setCalculating(false);
     }
@@ -316,6 +326,11 @@ const RoutesPanel = ({ routeResult, onCalculate }: Props) => {
               <Clock className="w-4 h-4 text-accent shrink-0" />
               <span>Duración estimada: <strong>{routeResult.duration} min</strong></span>
             </div>
+            {routeResult.distance > 0 && routeResult.duration > 0 && (
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-mono">
+                <span>Debug: vel. media ≈ {(routeResult.distance / (routeResult.duration / 60)).toFixed(1)} km/h</span>
+              </div>
+            )}
             {arrivalTime && (
               <div className="flex items-center gap-2 text-sm text-foreground pt-1 border-t border-accent/10">
                 <Navigation className="w-4 h-4 text-accent shrink-0" />
