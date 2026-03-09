@@ -7,7 +7,6 @@ import MapView from "@/components/MapView";
 import MarkersPanel from "@/components/MarkersPanel";
 import RoutesPanel from "@/components/RoutesPanel";
 import ZonesPanel from "@/components/ZonesPanel";
-import { predefinedRoutes } from "@/data/predefinedRoutes";
 import { Save } from "lucide-react";
 
 const HomePage = () => {

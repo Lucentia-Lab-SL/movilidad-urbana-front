@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import { predefinedRoutes, provincias, getLocalidades } from "@/data/predefinedRoutes";
 import { Route as RouteIcon, Search, MapPin, Eye, Filter, ArrowLeft } from "lucide-react";
-import { saveJSON } from "@/utils/storage";
-import { getAuthUser } from "@/utils/storage";
+import { saveJSON, getAuthUser } from "@/utils/storage";
 
 const RoutesListPage = () => {
   const navigate = useNavigate();
