@@ -215,6 +215,11 @@ const HomePage = () => {
             onStartRoute={() => setIsRouteActive(true)}
             onStopRoute={() => {
               setIsRouteActive(false);
+              setRouteResult(null);
+              setRouteOriginLabel("");
+              setRouteDestLabel("");
+              setRouteMode("coche");
+              setDepartureTime("");
               toast.info("Ruta finalizada");
             }}
           />
