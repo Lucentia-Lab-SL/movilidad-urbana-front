@@ -28,6 +28,7 @@ const HomePage = () => {
   const [zones, setZones] = useState([]);
   const [isDrawingZone, setIsDrawingZone] = useState(false);
   const [tempZone, setTempZone] = useState([]);
+  const [isRouteActive, setIsRouteActive] = useState(false);
 
   useEffect(() => {
     const selRouteKey = `selectedRoute:${authUser}`;
@@ -210,8 +211,14 @@ const HomePage = () => {
           <RoutesPanel
             routeResult={routeResult}
             onCalculate={handleRouteCalculated}
+            isRouteActive={isRouteActive}
+            onStartRoute={() => setIsRouteActive(true)}
+            onStopRoute={() => {
+              setIsRouteActive(false);
+              toast.info("Ruta finalizada");
+            }}
           />
-          {routeResult && (
+          {routeResult && !isRouteActive && (
             <button
               onClick={saveRoute}
               className="h-[44px] rounded-md bg-accent/10 border border-accent/30 text-accent text-sm font-medium hover:bg-accent/20 transition-colors flex items-center justify-center gap-2"

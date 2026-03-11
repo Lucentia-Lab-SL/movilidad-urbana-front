@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MapPin, Navigation, Clock, Route as RouteIcon, Car, Footprints, Bike, Bus, TrainFront } from "lucide-react";
+import { MapPin, Navigation, Clock, Route as RouteIcon, Car, Footprints, Bike, Bus, TrainFront, Play, Square } from "lucide-react";
 import { formatDuration } from "@/utils/formatDuration";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -77,7 +77,7 @@ const AddressInput = ({ label, placeholder, value, onChange, onSelect, icon: Ico
   );
 };
 
-const RoutesPanel = ({ routeResult, onCalculate }) => {
+const RoutesPanel = ({ routeResult, onCalculate, isRouteActive, onStartRoute, onStopRoute }) => {
   const [originText, setOriginText] = useState("");
   const [destText, setDestText] = useState("");
   const [originCoord, setOriginCoord] = useState(null);
@@ -207,8 +207,21 @@ const RoutesPanel = ({ routeResult, onCalculate }) => {
         </button>
 
         {routeResult && (
-          <div className="bg-accent/5 border border-accent/20 rounded-lg p-4 flex flex-col gap-2 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
-            <h4 className="text-xs font-bold text-foreground uppercase tracking-wide">Información de la ruta</h4>
+          <div className={`rounded-lg p-4 flex flex-col gap-2 animate-in fade-in-0 slide-in-from-bottom-2 duration-300 ${
+            isRouteActive
+              ? "bg-primary/10 border-2 border-primary shadow-[0_0_12px_hsl(var(--primary)/0.15)]"
+              : "bg-accent/5 border border-accent/20"
+          }`}>
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-foreground uppercase tracking-wide">
+                {isRouteActive ? "🟢 Ruta en curso" : "Información de la ruta"}
+              </h4>
+              {isRouteActive && (
+                <span className="text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full animate-pulse">
+                  ACTIVA
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-2 text-sm text-foreground">
               <MapPin className="w-4 h-4 text-accent shrink-0" />
               <span>Distancia: <strong>{routeResult.distance} km</strong></span>
@@ -222,6 +235,24 @@ const RoutesPanel = ({ routeResult, onCalculate }) => {
                 <Navigation className="w-4 h-4 text-accent shrink-0" />
                 <span>Hora estimada de llegada: <strong>{arrivalTime}</strong></span>
               </div>
+            )}
+
+            {!isRouteActive ? (
+              <button
+                onClick={onStartRoute}
+                className="mt-2 h-[44px] rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all duration-150 flex items-center justify-center gap-2"
+              >
+                <Play className="w-4 h-4" />
+                Iniciar ruta
+              </button>
+            ) : (
+              <button
+                onClick={onStopRoute}
+                className="mt-2 h-[44px] rounded-md bg-destructive text-destructive-foreground text-sm font-medium hover:opacity-90 transition-all duration-150 flex items-center justify-center gap-2"
+              >
+                <Square className="w-4 h-4" />
+                Finalizar ruta
+              </button>
             )}
           </div>
         )}
