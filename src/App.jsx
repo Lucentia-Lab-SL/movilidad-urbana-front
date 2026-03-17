@@ -9,26 +9,29 @@ import ProfilePage from "./pages/ProfilePage";
 import RoutesListPage from "./pages/RoutesListPage";
 import ZonesListPage from "./pages/ZonesListPage";
 import NotFound from "./pages/NotFound";
+import { AuthProvider } from "@/context/AuthContext";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={<Navigate to="/mapa" replace />} />
-          <Route path="/mapa" element={<HomePage />} />
-          <Route path="/rutas" element={<RoutesListPage />} />
-          <Route path="/zonas" element={<ZonesListPage />} />
-          <Route path="/perfil" element={<ProfilePage />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/" element={<Navigate to="/mapa" replace />} />
+            <Route path="/mapa" element={<HomePage />} />
+            <Route path="/rutas" element={<RoutesListPage />} />
+            <Route path="/zonas" element={<ZonesListPage />} />
+            <Route path="/perfil" element={<ProfilePage />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

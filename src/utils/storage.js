@@ -12,19 +12,18 @@ export function saveJSON(key, value) {
 }
 
 export function isAuthenticated() {
-  return localStorage.getItem("auth") === "true";
+  return !!localStorage.getItem("firebaseToken");
 }
 
 export function getAuthUser() {
-  return localStorage.getItem("authUser") || "";
+  return localStorage.getItem("user") || "";
 }
 
 export function login(username) {
-  localStorage.setItem("auth", "true");
-  localStorage.setItem("authUser", username);
+  localStorage.setItem("user", username);
 }
 
 export function logout() {
-  localStorage.removeItem("auth");
-  localStorage.removeItem("authUser");
+  localStorage.removeItem("user");
+  localStorage.removeItem("firebaseToken");
 }

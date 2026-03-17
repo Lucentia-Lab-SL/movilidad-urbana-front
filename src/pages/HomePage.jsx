@@ -7,16 +7,32 @@ import MapView from "@/components/MapView";
 import MarkersPanel from "@/components/MarkersPanel";
 import RoutesPanel from "@/components/RoutesPanel";
 import ZonesPanel from "@/components/ZonesPanel";
-import { predefinedRoutes } from "@/data/predefinedRoutes";
 import { Save } from "lucide-react";
+import { useApi } from "@/hooks/useApi";
 
 const HomePage = () => {
   const navigate = useNavigate();
   const authUser = getAuthUser();
+  const { fetchApi } = useApi();
+  const [placesApi, setPlacesApi] = useState(null);
+  const [apiError, setApiError] = useState("");
 
   useEffect(() => {
     if (!isAuthenticated()) navigate("/login");
   }, [navigate]);
+
+  useEffect(() => {
+  async function cargarPlaces() {
+    try {
+      const data = await fetchApi("/places-test");
+      setPlacesApi(data);
+    } catch (err) {
+      setApiError(err.message);
+    }
+  }
+
+  cargarPlaces();
+}, [fetchApi]);
 
   const markersKey = `markers:${authUser}`;
   const [markers, setMarkers] = useState(() => loadJSON(markersKey, []));
@@ -55,29 +71,18 @@ const HomePage = () => {
       localStorage.removeItem(selPredefinedKey);
       (async () => {
         try {
-          const url = `https://router.project-osrm.org/route/v1/driving/${selPredefined.origen.lng},${selPredefined.origen.lat};${selPredefined.destino.lng},${selPredefined.destino.lat}?overview=full&geometries=geojson`;
-          const res = await fetch(url);
-          const data = await res.json();
-          if (data.code === "Ok" && data.routes?.length) {
-            const route = data.routes[0];
-            const distKm = Math.round((route.distance / 1000) * 10) / 10;
-            const durMin = Math.round((distKm / 80) * 60);
-            const geometry = route.geometry.coordinates.map(
-              (c) => [c[1], c[0]]
-            );
-            setRouteResult({
-              originCoord: selPredefined.origen,
-              destCoord: selPredefined.destino,
-              geometry,
-              distance: distKm,
-              duration: durMin,
-            });
-            setRouteOriginLabel(selPredefined.origen.label);
-            setRouteDestLabel(selPredefined.destino.label);
-          }
-        } catch { /* silently fail */ }
-      })();
+          const result = await cargarRutaPredefinida(
+        selPredefined.origen,
+        selPredefined.destino
+      );
+      setRouteResult(result);
+      setRouteOriginLabel(selPredefined.origen.label);
+      setRouteDestLabel(selPredefined.destino.label);
+    } catch {
+      // silently fail
     }
+  })();
+}
 
     if (selZone) {
       setZones([{ points: selZone.points }]);
@@ -161,27 +166,40 @@ const HomePage = () => {
     toast.success("Ruta guardada");
   };
 
+  const cargarRutaPredefinida = async (origen, destino) => {
+  const url = `https://router.project-osrm.org/route/v1/driving/${origen.lng},${origen.lat};${destino.lng},${destino.lat}?overview=full&geometries=geojson`;
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if (data.code === "Ok" && data.routes?.length) {
+    const route = data.routes[0];
+    const distKm = Math.round((route.distance / 1000) * 10) / 10;
+    const durMin = Math.round((distKm / 80) * 60);
+    const geometry = route.geometry.coordinates.map((c) => [c[1], c[0]]);
+
+    return {
+      originCoord: origen,
+      destCoord: destino,
+      geometry,
+      distance: distKm,
+      duration: durMin,
+    };
+  }
+
+  throw new Error("No se pudo calcular la ruta");
+};
+
   const handleSelectPredefined = useCallback(async (pr) => {
-    try {
-      const url = `https://router.project-osrm.org/route/v1/driving/${pr.origen.lng},${pr.origen.lat};${pr.destino.lng},${pr.destino.lat}?overview=full&geometries=geojson`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.code === "Ok" && data.routes?.length) {
-        const route = data.routes[0];
-        const distKm = Math.round((route.distance / 1000) * 10) / 10;
-        const durMin = Math.round((distKm / 80) * 60);
-        const geometry = route.geometry.coordinates.map(
-          (c) => [c[1], c[0]]
-        );
-        setRouteResult({ originCoord: pr.origen, destCoord: pr.destino, geometry, distance: distKm, duration: durMin });
-        setRouteOriginLabel(pr.origen.label);
-        setRouteDestLabel(pr.destino.label);
-        toast.success(`Mostrando: ${pr.nombre}`);
-      }
-    } catch {
-      toast.error("No se pudo cargar la ruta");
-    }
-  }, []);
+  try {
+    const result = await cargarRutaPredefinida(pr.origen, pr.destino);
+    setRouteResult(result);
+    setRouteOriginLabel(pr.origen.label);
+    setRouteDestLabel(pr.destino.label);
+    toast.success(`Mostrando: ${pr.nombre}`);
+  } catch {
+    toast.error("No se pudo cargar la ruta");
+  }
+}, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -199,6 +217,16 @@ const HomePage = () => {
           Marca puntos, calcula rutas y define zonas directamente sobre el mapa.
         </p>
       </div>
+      <div className="px-6 pb-2">
+  {apiError && (
+    <p className="text-sm text-red-500">Error backend: {apiError}</p>
+  )}
+  {placesApi && (
+    <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-[200px]">
+      {JSON.stringify(placesApi, null, 2)}
+    </pre>
+  )}
+</div>
 
       <div className="flex-1 flex gap-4 p-4 overflow-hidden">
         <aside className="w-[360px] shrink-0 bg-card border border-border rounded-lg p-5 flex flex-col gap-6 overflow-y-auto shadow-[var(--shadow-card)]">
