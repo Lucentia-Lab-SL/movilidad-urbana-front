@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { isAuthenticated, getAuthUser, loadJSON, saveJSON } from "@/utils/storage";
 import Header from "@/components/Header";
-import { User, Mail, AtSign, Pencil, Save, ArrowLeft, Camera } from "lucide-react";
+import { User, Mail, Pencil, Save, ArrowLeft, Camera } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 const DEFAULT_PROFILE = {
   name: "",
@@ -13,6 +14,7 @@ const DEFAULT_PROFILE = {
 
 const ProfilePage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (!isAuthenticated()) navigate("/login");
@@ -20,15 +22,41 @@ const ProfilePage = () => {
 
   const authUser = getAuthUser();
   const profileKey = `profile:${authUser}`;
+
   const [profile, setProfile] = useState(() => {
     const saved = loadJSON(profileKey, DEFAULT_PROFILE);
     return {
       ...DEFAULT_PROFILE,
       ...saved,
-      username: saved.username || authUser,
-      name: saved.name || authUser,
+      name: saved.name || user?.displayName || user?.email?.split("@")[0] || "",      
+      email: saved.email || user?.email || "",
+      username: saved.username || user?.email || user?.uid || authUser,
+      avatar: saved.avatar || user?.photoURL || "",    
     };
   });
+
+  useEffect(() => {
+  if (!user) return;
+
+  setProfile((prev) => {
+    const fallbackName =
+      user.displayName ||
+      user.email?.split("@")[0] ||
+      "";
+
+    const currentName =
+      prev.name === user.email ? "" : prev.name;
+
+    return {
+      ...prev,
+      name: currentName || fallbackName,
+      email: prev.email || user.email || "",
+      username: prev.username || user.email || user.uid || "",
+      avatar: prev.avatar || user.photoURL || "",
+    };
+  });
+}, [user]);
+
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(profile);
   const fileInputRef = useRef(null);
@@ -63,7 +91,12 @@ const ProfilePage = () => {
   };
 
   const currentData = editing ? draft : profile;
-  const initials = (currentData.name || "U").slice(0, 2).toUpperCase();
+  const initials = (currentData.name || currentData.email || "U")
+  .split(" ")
+  .map((word) => word[0])
+  .join("")
+  .slice(0, 2)
+  .toUpperCase();
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -115,7 +148,6 @@ const ProfilePage = () => {
           <div className="flex flex-col gap-4">
             <Field icon={User} label="Nombre" value={currentData.name} editing={editing} onChange={(v) => setDraft((p) => ({ ...p, name: v }))} />
             <Field icon={Mail} label="Correo electrónico" value={currentData.email} editing={editing} placeholder="usuario@ejemplo.com" onChange={(v) => setDraft((p) => ({ ...p, email: v }))} />
-            <Field icon={AtSign} label="Usuario" value={currentData.username} editing={editing} onChange={(v) => setDraft((p) => ({ ...p, username: v }))} />
           </div>
 
           {editing ? (
