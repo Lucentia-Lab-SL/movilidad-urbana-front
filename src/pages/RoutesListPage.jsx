@@ -1,40 +1,74 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
-import { Route as RouteIcon, Search, MapPin, Eye, ArrowLeft, Trash2 } from "lucide-react";
-import { saveJSON, loadJSON, getAuthUser } from "@/utils/storage";
-import { toast } from "sonner";
+import RouteTravelsPanel from "@/components/RouteTravelsPanel";
+import {
+  Route as RouteIcon,
+  Search,
+  ArrowLeft,
+  BarChart3,
+} from "lucide-react";
+import { useApi } from "@/hooks/useApi";
 
 const RoutesListPage = () => {
   const navigate = useNavigate();
-  const authUser = getAuthUser();
+  const { fetchApi } = useApi();
+
   const [search, setSearch] = useState("");
-  const [routes, setRoutes] = useState(() => loadJSON(`rutas:${authUser}`, []));
+  const [selectedRoute, setSelectedRoute] = useState(null);
+  const [routes, setRoutes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const loadRoutesFromTravels = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const data = await fetchApi("/route-travels", {}, true);
+        console.log("ROUTE_TRAVELS BACKEND:", data);
+
+        const uniqueRoutesMap = new Map();
+
+        data.forEach((item) => {
+          if (!uniqueRoutesMap.has(item.route_id)) {
+            uniqueRoutesMap.set(item.route_id, {
+              route_id: item.route_id,
+              count: 1,
+              first_fecha: item.fecha,
+              last_fecha: item.fecha,
+              sample_viajes_estimados: item.viajes_estimados,
+            });
+          } else {
+            const existingRoute = uniqueRoutesMap.get(item.route_id);
+            existingRoute.count += 1;
+            existingRoute.last_fecha = item.fecha;
+          }
+        });
+
+        const uniqueRoutes = Array.from(uniqueRoutesMap.values());
+        setRoutes(uniqueRoutes);
+      } catch (err) {
+        console.error("ERROR ROUTE_TRAVELS:", err);
+        setError("Error al cargar las rutas desde route-travels");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadRoutesFromTravels();
+  }, [fetchApi]);
 
   const filtered = useMemo(() => {
     return routes.filter((route) => {
       if (!search) return true;
-
-      const q = search.toLowerCase();
-
-      return (
-        route.origen?.label?.toLowerCase().includes(q) ||
-        route.destino?.label?.toLowerCase().includes(q) ||
-        route.modo?.toLowerCase().includes(q)
-      );
+      return route.route_id?.toLowerCase().includes(search.toLowerCase());
     });
   }, [routes, search]);
 
-  const viewOnMap = (route) => {
-    saveJSON(`selectedRoute:${authUser}`, route);
-    navigate("/mapa");
-  };
-
-  const deleteRoute = (routeId) => {
-    const updatedRoutes = routes.filter((route) => route.id !== routeId);
-    setRoutes(updatedRoutes);
-    saveJSON(`rutas:${authUser}`, updatedRoutes);
-    toast.success("Ruta eliminada");
+  const selectRouteDetails = (route) => {
+    setSelectedRoute(route);
   };
 
   return (
@@ -52,11 +86,11 @@ const RoutesListPage = () => {
 
         <h1 className="text-xl font-bold text-foreground flex items-center gap-2 mb-2">
           <RouteIcon className="w-5 h-5 text-accent" />
-          Rutas guardadas
+          Rutas
         </h1>
 
         <p className="text-sm text-muted-foreground mb-6">
-          Consulta las rutas que has guardado y vuelve a visualizarlas en el mapa.
+          Consulta las rutas disponibles y visualiza sus viajes reales y predichos.
         </p>
 
         <div className="mb-6">
@@ -64,7 +98,7 @@ const RoutesListPage = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Buscar por origen, destino o modo..."
+              placeholder="Buscar por route_id..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full h-10 rounded-md border border-input bg-card pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-accent transition-all"
@@ -72,77 +106,102 @@ const RoutesListPage = () => {
           </div>
         </div>
 
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-16">
+            <p className="text-muted-foreground">Cargando rutas...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-16">
+            <p className="text-red-500">{error}</p>
+          </div>
+        ) : routes.length === 0 ? (
           <div className="text-center py-16">
             <RouteIcon className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
             <p className="text-muted-foreground">
-              {routes.length === 0
-                ? "Todavía no has guardado ninguna ruta."
-                : "No se encontraron rutas con esa búsqueda."}
+              No hay rutas disponibles en route-travels.
+            </p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-16">
+            <RouteIcon className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+            <p className="text-muted-foreground">
+              No se encontraron rutas para esa búsqueda.
             </p>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             {filtered.map((route) => (
               <div
-                key={route.id}
-                className="bg-card border border-border rounded-lg p-5 flex flex-col gap-3 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-elevated)] transition-shadow"
+                key={route.route_id}
+                className={`bg-card border rounded-lg p-5 flex flex-col gap-3 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-elevated)] transition-shadow ${
+                  selectedRoute?.route_id === route.route_id
+                    ? "border-accent ring-1 ring-accent/30"
+                    : "border-border"
+                }`}
               >
                 <div>
                   <h3 className="text-sm font-bold text-foreground">
-                    {route.origen?.label?.split(",")[0] || "Origen"} → {route.destino?.label?.split(",")[0] || "Destino"}
+                    {route.route_id}
                   </h3>
 
-                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                    <MapPin className="w-3 h-3" />
-                    {route.modo || "Sin modo"} · {route.fechaISO ? new Date(route.fechaISO).toLocaleDateString() : "Sin fecha"}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Primera fecha encontrada:{" "}
+                    {route.first_fecha
+                      ? new Date(route.first_fecha).toLocaleString()
+                      : "No disponible"}
                   </p>
                 </div>
 
                 <div className="text-xs text-muted-foreground leading-relaxed space-y-1">
                   <p>
-                    <strong>Origen:</strong> {route.origen?.label || "No disponible"}
+                    <strong>route_id:</strong> {route.route_id}
                   </p>
                   <p>
-                    <strong>Destino:</strong> {route.destino?.label || "No disponible"}
+                    <strong>Registros:</strong> {route.count}
                   </p>
                   <p>
-                    <strong>Distancia:</strong> {route.distanciaKm ?? "-"} km
+                    <strong>Primera fecha:</strong>{" "}
+                    {route.first_fecha
+                      ? new Date(route.first_fecha).toLocaleString()
+                      : "No disponible"}
                   </p>
                   <p>
-                    <strong>Duración:</strong> {route.duracionMin ?? "-"} min
+                    <strong>Última fecha:</strong>{" "}
+                    {route.last_fecha
+                      ? new Date(route.last_fecha).toLocaleString()
+                      : "No disponible"}
                   </p>
-                  {route.salidaHora && (
-                    <p>
-                      <strong>Salida:</strong> {route.salidaHora}
-                    </p>
-                  )}
-                  {route.llegadaHora && (
-                    <p>
-                      <strong>Llegada:</strong> {route.llegadaHora}
-                    </p>
-                  )}
+                  <p>
+                    <strong>Viajes estimados (muestra):</strong>{" "}
+                    {route.sample_viajes_estimados ?? "No disponible"}
+                  </p>
                 </div>
 
-                <div className="flex items-center justify-between mt-auto pt-2 border-t border-border gap-2">
+                <div className="flex flex-wrap items-center justify-end mt-auto pt-2 border-t border-border gap-2">
                   <button
-                    onClick={() => viewOnMap(route)}
-                    className="h-8 px-3 rounded-md bg-accent/10 text-accent text-xs font-medium hover:bg-accent/20 transition-colors flex items-center gap-1.5"
+                    onClick={() => selectRouteDetails(route)}
+                    className="h-8 px-3 rounded-md bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors flex items-center gap-1.5"
                   >
-                    <Eye className="w-3.5 h-3.5" />
-                    Ver en mapa
-                  </button>
-
-                  <button
-                    onClick={() => deleteRoute(route.id)}
-                    className="h-8 px-3 rounded-md bg-red-500/10 text-red-500 text-xs font-medium hover:bg-red-500/20 transition-colors flex items-center gap-1.5"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Eliminar
+                    <BarChart3 className="w-3.5 h-3.5" />
+                    Ver detalles
                   </button>
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {selectedRoute && (
+          <div className="mt-8 rounded-lg border border-border bg-card p-5 shadow-[var(--shadow-card)]">
+            <h2 className="text-lg font-bold text-foreground mb-2">
+              Detalle de la ruta seleccionada
+            </h2>
+
+            <p className="text-sm text-muted-foreground mb-4">
+              route_id: {selectedRoute.route_id}
+            </p>
+
+            <RouteTravelsPanel routeId={selectedRoute.route_id} />
           </div>
         )}
       </div>

@@ -10,6 +10,7 @@ import ZonesPanel from "@/components/ZonesPanel";
 import { Save } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 
+
 const HomePage = () => {
   const navigate = useNavigate();
   const authUser = getAuthUser();
