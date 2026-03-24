@@ -9,10 +9,19 @@ import ProfilePage from "./pages/ProfilePage";
 import RoutesListPage from "./pages/RoutesListPage";
 import ZonesListPage from "./pages/ZonesListPage";
 import NotFound from "./pages/NotFound";
-import { AuthProvider } from "@/context/AuthContext";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 
 const queryClient = new QueryClient();
 
+const PrivateRoute = ({ children }) => {
+  const { user } = useAuth();
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+};
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -20,13 +29,13 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
+            {/* Protegemos rutas */}          <Routes>
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/" element={<Navigate to="/mapa" replace />} />
-            <Route path="/mapa" element={<HomePage />} />
-            <Route path="/rutas" element={<RoutesListPage />} />
-            <Route path="/zonas" element={<ZonesListPage />} />
-            <Route path="/perfil" element={<ProfilePage />} />
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/mapa" element={<PrivateRoute><HomePage /></PrivateRoute>} />
+            <Route path="/rutas" element={<PrivateRoute><RoutesListPage /></PrivateRoute>} />
+            <Route path="/zonas" element={<PrivateRoute><ZonesListPage /></PrivateRoute>} />
+            <Route path="/perfil" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

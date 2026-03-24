@@ -18,7 +18,7 @@ const LoginPage = () => {
       const token = await result.user.getIdToken();
       localStorage.setItem("firebaseToken", token);  
       localStorage.setItem("user", result.user.email || result.user.uid); 
-      navigate("/"); 
+      navigate("/mapa"); 
     } catch (err) {
       setError("Error en login: " + err.message);
     } finally {
@@ -29,7 +29,7 @@ const LoginPage = () => {
   const handleDemoLogin = () => {
     localStorage.setItem("user", "demo@local");
     localStorage.setItem("firebaseToken", "demo-token");  
-    navigate("/");
+    navigate("/mapa");
   };
 
   return (
