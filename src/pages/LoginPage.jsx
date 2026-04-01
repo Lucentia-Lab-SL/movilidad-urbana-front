@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { auth } from "@/lib/firebase";  // Crea este primero
+import { auth } from "@/lib/firebase";
 import { LogIn } from "lucide-react";
+import fondoCiudad from "@/assets/fondo1-mobility.png";
+import logo from "@/assets/logo-mobility-60x60.png";
+import tituloMovilidad from "@/assets/Imagen-mobility-e1761736499779.png";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -12,13 +15,16 @@ const LoginPage = () => {
   const handleFirebaseLogin = async () => {
     setLoading(true);
     setError("");
+
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      const token = await result.user.getIdToken();
-      localStorage.setItem("firebaseToken", token);  
-      localStorage.setItem("user", result.user.email || result.user.uid); 
-      navigate("/mapa"); 
+      const token = await result.user.getIdToken(true);
+
+      localStorage.setItem("firebaseToken", token);
+      localStorage.setItem("user", result.user.email || result.user.uid);
+
+      navigate("/mapa");
     } catch (err) {
       setError("Error en login: " + err.message);
     } finally {
@@ -26,49 +32,74 @@ const LoginPage = () => {
     }
   };
 
-  const handleDemoLogin = () => {
-    localStorage.setItem("user", "demo@local");
-    localStorage.setItem("firebaseToken", "demo-token");  
-    navigate("/mapa");
-  };
+ return (
+  <div
+    className="min-h-screen flex items-center justify-center relative overflow-hidden bg-center bg-cover bg-no-repeat"
+    style={{ backgroundImage: `url(${fondoCiudad})` }}
+  >
+    {/* overlay */}
+    <div className="absolute inset-0 bg-white/20 backdrop-blur-[2px]" />
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden">
-      {/* Tu CSS igual */}
-      <div className="absolute inset-x-0 top-0 h-[45%] pointer-events-none" style={{ background: "linear-gradient(180deg, hsl(218 70% 14%) 0%, hsl(218 70% 14% / 0.5) 50%, transparent 100%)" }} />
-      
-      <div className="relative z-10 w-full max-w-[440px] mx-4 bg-card rounded-lg border border-border p-[30px] shadow-card flex flex-col gap-4">
-        <span className="self-start inline-flex items-center gap-1.5 text-xs font-semibold tracking-wide uppercase bg-accent/15 text-accent px-3 py-1 rounded-full">
-          Acceso
-        </span>
-        <h1 className="text-2xl font-bold text-foreground mt-1">Movilidad Urbana</h1>
-        <p className="text-sm text-muted-foreground -mt-2">Sitio web de visualización de rutas, zonas y marcadores</p>
+    {/* card principal */}
+    <div className="relative z-10 w-full max-w-[460px] mx-4 bg-white/85 backdrop-blur-xl rounded-3xl border border-white/40 p-8 shadow-[0_20px_60px_rgba(0,0,0,0.15)] flex flex-col gap-5">
 
-        {/* NUEVO: Botón Firebase Google */}
+      {/* badge */}
+      <span className="self-start text-xs font-semibold tracking-wide uppercase bg-green-100 text-green-600 px-3 py-1 rounded-full">
+        Acceso
+      </span>
+
+      {/* header */}
+      <div className="flex items-center gap-4">
+        <img
+          src={logo}
+          alt="Logo Movilidad"
+          className="w-20 h-16 object-contain shrink-0"
+        />
+
+        <img
+          src={tituloMovilidad}
+          alt="Movilidad"
+          className="h-20 w-auto object-contain"
+        />
+      </div>
+
+      {/* caja interior */}
+      <div className="bg-white/80 backdrop-blur-lg rounded-2xl border border-white/50 p-5 shadow-inner flex flex-col gap-4">
+
+        {/* texto */}
+        <div className="text-center">
+          <h2 className="text-lg font-semibold text-gray-800">
+            Accede fácilmente a la plataforma
+          </h2>
+
+          <p className="text-sm text-gray-500 mt-1">
+            Regístrate con tu cuenta corporativa de Google.
+          </p>
+        </div>
+
+        {/* botón */}
         <button
           onClick={handleFirebaseLogin}
           disabled={loading}
-          className="h-[46px] w-full rounded-md bg-blue-500 text-white font-medium flex items-center justify-center gap-2 hover:bg-blue-600 transition-all duration-150"
+          className="h-[52px] w-full rounded-xl bg-white text-gray-700 font-medium flex items-center justify-center gap-3 shadow-md hover:shadow-lg hover:scale-[1.01] active:scale-[0.98] transition-all duration-200"
         >
-          <LogIn className="w-4 h-4" />
-          {loading ? "Cargando..." : "Acceder con Google (Firebase)"}
+          <img
+            src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+            alt="Google"
+            className="w-5 h-5"
+          />
+          {loading ? "Cargando..." : "Registrarse con Google"}
         </button>
 
-        {error && <span className="text-xs text-destructive">{error}</span>}
+        {/* texto legal */}
+        <p className="text-xs text-gray-500 text-center">
+          Es necesario disponer de una cuenta corporativa{" "}
+          <span className="font-semibold text-gray-700">autorizada</span>.
+        </p>
 
-        {/* Demo viejo abajo */}
-        <div className="text-center py-4 border-t border-border">
-          <p className="text-xs text-muted-foreground mb-2">O demo rápido:</p>
-          <button
-            onClick={handleDemoLogin}
-            className="h-[40px] w-full rounded-md bg-gray-500 text-white text-xs font-medium hover:bg-gray-600 transition-all"
-          >
-            Cualquier usuario/contraseña
-          </button>
-        </div>
       </div>
     </div>
-  );
-};
-
+  </div>
+);
+}
 export default LoginPage;

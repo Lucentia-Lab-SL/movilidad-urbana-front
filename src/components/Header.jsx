@@ -1,6 +1,9 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { getAuthUser, logout } from "@/utils/storage";
 import { LogOut } from "lucide-react";
+import { signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import logo from "@/assets/logo-mobility-60x60.png";
 
 const NAV_ITEMS = [
   { label: "Mapa", path: "/mapa" },
@@ -13,19 +16,28 @@ const Header = () => {
   const location = useLocation();
   const user = getAuthUser();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Error cerrando sesión en Firebase:", error);
+    }
+
     logout();
     navigate("/login");
   };
 
-  return (
+ return (
     <header className="h-16 flex items-center justify-between px-6 bg-card border-b border-border shrink-0">
-      <span
+      <div
         onClick={() => navigate("/mapa")}
-        className="text-lg font-bold text-foreground tracking-tight cursor-pointer"
+        className="flex items-center gap-2 cursor-pointer"
       >
-        Movilidad Urbana
-      </span>
+        <img src={logo} alt="Movilidad" className="h-8 w-auto object-contain" />
+        <span className="text-lg font-bold text-foreground tracking-tight">
+          Movilidad Urbana
+        </span>
+      </div>
 
       <nav className="hidden md:flex items-center gap-1">
         {NAV_ITEMS.map((item) => {
