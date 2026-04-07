@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
@@ -223,40 +222,47 @@ const MapView = ({
     const group = layersRef.current;
     group.clearLayers();
 
-    // Marcadores creados manualmente por el usuario
-    markers.forEach((marker, index) => {
-      L.marker([marker.lat, marker.lng])
-        .bindPopup(`Punto ${index + 1}`)
-        .addTo(group);
-    });
+    const hasActiveRoute =
+  routeResult &&
+  routeResult.geometry &&
+  routeResult.geometry.length > 0;
 
-    // Lugares cargados desde backend
-    places?.forEach((place) => {
-  const marker = L.marker([place.lat, place.lon]).addTo(group);
+  // Solo mostrar marcadores si NO hay una ruta activa
+if (!hasActiveRoute) {
+  // Marcadores creados manualmente por el usuario
+  markers.forEach((marker, index) => {
+    L.marker([marker.lat, marker.lng])
+      .bindPopup(`Punto ${index + 1}`)
+      .addTo(group);
+  });
 
-  marker.bindPopup(`
-    <div>
-      <strong>${place.name || "Lugar"}</strong><br/>
-      ${place.category || ""}<br/>
-      <span style="color:#666;">Cargando horarios...</span>
-    </div>
-  `);
+  // Lugares cargados desde backend
+  places?.forEach((place) => {
+    const marker = L.marker([place.lat, place.lon]).addTo(group);
 
-  // Abrir popup y cargar horarios al mismo tiempo
-   marker.on("popupopen", async () => {
-    const hours = await onLoadPlaceHours?.(place.place_id);
-    const hoursHtml = formatTodayPlaceHours(hours);
-
-    marker.setPopupContent(`
+    marker.bindPopup(`
       <div>
         <strong>${place.name || "Lugar"}</strong><br/>
-        ${place.category || ""}<br/><br/>
-        <strong>Horarios:</strong>
-        ${hoursHtml}
+        ${place.category || ""}<br/>
+        <span style="color:#666;">Cargando horarios...</span>
       </div>
     `);
+
+    marker.on("popupopen", async () => {
+      const hours = await onLoadPlaceHours?.(place.place_id);
+      const hoursHtml = formatTodayPlaceHours(hours);
+
+      marker.setPopupContent(`
+        <div>
+          <strong>${place.name || "Lugar"}</strong><br/>
+          ${place.category || ""}<br/><br/>
+          <strong>Horarios:</strong>
+          ${hoursHtml}
+        </div>
+      `);
+    });
   });
-});
+}
 
     // Ruta calculada
     if (routeResult) {
