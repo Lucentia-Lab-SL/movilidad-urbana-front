@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { getAuthUser, loadJSON, saveJSON } from "@/utils/storage";
 import { toast } from "sonner";
 import Header from "@/components/Header";
@@ -11,7 +10,6 @@ import { Save } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 
 const HomePage = () => {
-  const navigate = useNavigate();
   const authUser = getAuthUser();
   const { fetchApi } = useApi();
 
@@ -27,6 +25,8 @@ const HomePage = () => {
   const [tempZone, setTempZone] = useState([]);
   const [isRouteActive, setIsRouteActive] = useState(false);
   const [isUserLocation, setIsUserLocation] = useState(false);
+  const [liveUserPosition, setLiveUserPosition] = useState(null);
+  const watchIdRef = useRef(null);
 
   const markersKey = `markers:${authUser}`;
   const [markers, setMarkers] = useState(() => loadJSON(markersKey, []));
@@ -179,7 +179,63 @@ const HomePage = () => {
     toast.success("Ruta guardada");
   };
   
+  const startLiveRoute = () => {
+  if (!navigator.geolocation) {
+    toast.error("La geolocalización no está disponible en este navegador");
+    return;
+  }
+
+   if (watchIdRef.current !== null) {
+    navigator.geolocation.clearWatch(watchIdRef.current);
+  }
+  setIsRouteActive(true);
+
+  watchIdRef.current = navigator.geolocation.watchPosition(
+    (position) => {
+      const { latitude, longitude, accuracy } = position.coords;
+
+      setLiveUserPosition({
+        lat: latitude,
+        lng: longitude,
+        accuracy,
+      });
+    },
+    () => {
+      toast.error("No se pudo obtener tu ubicación en tiempo real");
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0,
+    }
+  );
+};
+
+const stopLiveRoute = () => {
+  if (watchIdRef.current !== null) {
+    navigator.geolocation.clearWatch(watchIdRef.current);
+    watchIdRef.current = null;
+  }
+
+  setIsRouteActive(false);
+  setLiveUserPosition(null);
+  setRouteResult(null);
+  setRouteOriginLabel("");
+  setRouteDestLabel("");
+  setRouteMode("coche");
+  setDepartureTime("");
+  setIsUserLocation(false);
+  toast.info("Ruta finalizada");
+};
   
+useEffect(() => {
+  return () => {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+    }
+  };
+}, []);
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
@@ -215,17 +271,9 @@ const HomePage = () => {
             routeResult={routeResult}
             onCalculate={handleRouteCalculated}
             isRouteActive={isRouteActive}
-            onStartRoute={() => setIsRouteActive(true)}
-            onStopRoute={() => {
-              setIsRouteActive(false);
-              setRouteResult(null);
-              setRouteOriginLabel("");
-              setRouteDestLabel("");
-              setRouteMode("coche");
-              setDepartureTime("");
-              setIsUserLocation(false);
-              toast.info("Ruta finalizada");
-            }}
+            
+            onStartRoute={startLiveRoute}
+            onStopRoute={stopLiveRoute}
           />
 
           {routeResult && !isRouteActive && (
@@ -264,7 +312,9 @@ const HomePage = () => {
             routeResult={routeResult}
             originText={routeOriginLabel}
             destText={routeDestLabel}
-            isUserLocation={isUserLocation}            
+            isUserLocation={isUserLocation} 
+            liveUserPosition={liveUserPosition}
+            isRouteActive={isRouteActive}           
             zones={zones}
             tempZone={tempZone}
             isDrawingZone={isDrawingZone}

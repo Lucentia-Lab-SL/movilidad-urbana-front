@@ -29,6 +29,23 @@ const destIcon = new L.Icon({
   shadowSize: [41, 41],
 });
 
+// icono azul para la ubicación actual del usuario (si se muestra como origen)
+const liveUserIcon = L.divIcon({
+  className: "",
+  html: `
+    <div style="
+      width: 18px;
+      height: 18px;
+      background: #2563EB;
+      border: 3px solid white;
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+    "></div>
+  `,
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+});
+
 // Orden de los días de la semana (0 = lunes, 6 = domingo)
 const dayOrder = [0, 1, 2, 3, 4, 5, 6];
 const dayNames = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
@@ -177,6 +194,8 @@ const MapView = ({
   originText,
   destText,
   isUserLocation,
+  liveUserPosition,
+  isRouteActive,
   zones,
   tempZone,
   isDrawingZone,
@@ -270,11 +289,30 @@ if (!hasActiveRoute) {
     // Ruta calculada
     const originLabel = isUserLocation ? "Estás aquí" : (originText || "Origen");
     const destinationLabel = destText || "Destino";
-    
+
     if (routeResult) {
-      L.marker([routeResult.originCoord.lat, routeResult.originCoord.lng], { icon: originIcon })
-        .bindPopup(originLabel)
-        .addTo(group);
+      const currentOrigin =
+        isRouteActive && liveUserPosition
+          ? liveUserPosition
+          : routeResult.originCoord;
+
+      if (isRouteActive && liveUserPosition) {
+        L.marker([liveUserPosition.lat, liveUserPosition.lng], { icon: liveUserIcon })
+          .bindPopup("Estás aquí")
+          .addTo(group);
+
+        L.circle([liveUserPosition.lat, liveUserPosition.lng], {
+          radius: liveUserPosition.accuracy || 20,
+          color: "#3B82F6",
+          fillColor: "#60A5FA",
+          fillOpacity: 0.15,
+          weight: 1,
+        }).addTo(group);
+      } else {
+        L.marker([currentOrigin.lat, currentOrigin.lng], { icon: originIcon })
+          .bindPopup(originLabel)
+          .addTo(group);
+      }
 
       L.marker([routeResult.destCoord.lat, routeResult.destCoord.lng], { icon: destIcon })
         .bindPopup(destinationLabel)
@@ -289,10 +327,14 @@ if (!hasActiveRoute) {
       }).addTo(group);
 
       if (mapRef.current) {
-        mapRef.current.fitBounds(polyline.getBounds(), { padding: [40, 40] });
+        if (isRouteActive && liveUserPosition) {
+          mapRef.current.setView([liveUserPosition.lat, liveUserPosition.lng], 16);
+        } else {
+          mapRef.current.fitBounds(polyline.getBounds(), { padding: [40, 40] });
+        }
       }
     }
-
+    
     // Zonas guardadas
     zones.forEach((zone) => {
       L.polygon(
@@ -319,7 +361,7 @@ if (!hasActiveRoute) {
         }
       ).addTo(group);
     }
-}, [markers, places, routeResult,originText,destText, isUserLocation, zones, tempZone, isDrawingZone, onLoadPlaceHours]);
+}, [markers, places, routeResult,originText,destText, isUserLocation, liveUserPosition, isRouteActive, zones, tempZone, isDrawingZone, onLoadPlaceHours]);
 
   return <div ref={containerRef} className="w-full h-full min-h-[400px] rounded-lg" />;
 };
