@@ -174,6 +174,9 @@ const MapView = ({
   markers,
   places,
   routeResult,
+  originText,
+  destText,
+  isUserLocation,
   zones,
   tempZone,
   isDrawingZone,
@@ -265,13 +268,16 @@ if (!hasActiveRoute) {
 }
 
     // Ruta calculada
+    const originLabel = isUserLocation ? "Estás aquí" : (originText || "Origen");
+    const destinationLabel = destText || "Destino";
+    
     if (routeResult) {
       L.marker([routeResult.originCoord.lat, routeResult.originCoord.lng], { icon: originIcon })
-        .bindPopup("Origen")
+        .bindPopup(originLabel)
         .addTo(group);
 
       L.marker([routeResult.destCoord.lat, routeResult.destCoord.lng], { icon: destIcon })
-        .bindPopup("Destino")
+        .bindPopup(destinationLabel)
         .addTo(group);
 
       const polyline = L.polyline(routeResult.geometry, {
@@ -313,7 +319,7 @@ if (!hasActiveRoute) {
         }
       ).addTo(group);
     }
-}, [markers, places, routeResult, zones, tempZone, isDrawingZone, onLoadPlaceHours]);
+}, [markers, places, routeResult,originText,destText, isUserLocation, zones, tempZone, isDrawingZone, onLoadPlaceHours]);
 
   return <div ref={containerRef} className="w-full h-full min-h-[400px] rounded-lg" />;
 };

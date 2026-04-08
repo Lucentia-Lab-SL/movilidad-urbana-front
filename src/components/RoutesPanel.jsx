@@ -38,6 +38,14 @@ function useNominatimSearch(query) {
   return { results, loading };
 }
 
+function getShortPlaceName(place) {
+  if (place.address?.city) return place.address.city;
+  if (place.address?.town) return place.address.town;
+  if (place.address?.village) return place.address.village;
+  if (place.address?.municipality) return place.address.municipality;
+  return place.display_name.split(",")[0];
+}
+
 const AddressInput = ({ label, placeholder, value, onChange, onSelect, icon: Icon, allowCurrentLocation = false, onUseCurrentLocation, }) => {
   const [focused, setFocused] = useState(false);
   const { results, loading } = useNominatimSearch(value);
@@ -112,14 +120,16 @@ const RoutesPanel = ({ routeResult, onCalculate, isRouteActive, onStartRoute, on
   const [departureTime, setDepartureTime] = useState("");
   const [error, setError] = useState("");
   const [calculating, setCalculating] = useState(false);
-
+  const [isUserLocation, setIsUserLocation] = useState(false);
+  
   const handleOriginSelect = useCallback((r) => {
-    setOriginText(r.display_name);
+    setOriginText(getShortPlaceName(r));
     setOriginCoord({ lat: parseFloat(r.lat), lng: parseFloat(r.lon) });
+    setIsUserLocation(false);
   }, []);
 
   const handleDestSelect = useCallback((r) => {
-    setDestText(r.display_name);
+    setDestText(getShortPlaceName(r));
     setDestCoord({ lat: parseFloat(r.lat), lng: parseFloat(r.lon) });
   }, []);
 
@@ -137,6 +147,7 @@ const RoutesPanel = ({ routeResult, onCalculate, isRouteActive, onStartRoute, on
 
       setOriginText("Mi ubicación actual");
       setOriginCoord({ lat: latitude, lng: longitude });
+      setIsUserLocation(true);
     },
     () => {
       setError("No se pudo obtener tu ubicación");
@@ -177,7 +188,7 @@ const RoutesPanel = ({ routeResult, onCalculate, isRouteActive, onStartRoute, on
       );
 
       const result = { originCoord, destCoord, geometry, distance: distKm, duration: durMin };
-      onCalculate(result, originText, destText, modeConfig.modeKey, departureTime);
+      onCalculate(result, originText, destText, modeConfig.modeKey, departureTime, isUserLocation);
     } catch {
       setError("No se ha encontrado una ruta para ese modo");
     } finally {
@@ -203,7 +214,7 @@ const RoutesPanel = ({ routeResult, onCalculate, isRouteActive, onStartRoute, on
         </h3>
 
         <AddressInput label="Origen" placeholder="Introduce una dirección o lugar"
-          value={originText} onChange={(v) => { setOriginText(v); setOriginCoord(null); }}
+          value={originText} onChange={(v) => { setOriginText(v); setOriginCoord(null); setIsUserLocation(false); }}
           onSelect={handleOriginSelect} onUseCurrentLocation={handleUseCurrentLocation}
           allowCurrentLocation={true} icon={MapPin} />
 

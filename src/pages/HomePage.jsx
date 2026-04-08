@@ -26,6 +26,7 @@ const HomePage = () => {
   const [isDrawingZone, setIsDrawingZone] = useState(false);
   const [tempZone, setTempZone] = useState([]);
   const [isRouteActive, setIsRouteActive] = useState(false);
+  const [isUserLocation, setIsUserLocation] = useState(false);
 
   const markersKey = `markers:${authUser}`;
   const [markers, setMarkers] = useState(() => loadJSON(markersKey, []));
@@ -129,12 +130,13 @@ const HomePage = () => {
   };
  
   // Maneja resultado de cálculo de ruta desde el panel
-  const handleRouteCalculated = (result, originLabel, destLabel, mode, depTime) => {
+  const handleRouteCalculated = (result, originLabel, destLabel, mode, depTime, userLocation) => {
     setRouteResult(result);
     setRouteOriginLabel(originLabel);
     setRouteDestLabel(destLabel);
     setRouteMode(mode);
     setDepartureTime(depTime);
+    setIsUserLocation(userLocation);
   };
 
   const saveRoute = () => {
@@ -221,6 +223,7 @@ const HomePage = () => {
               setRouteDestLabel("");
               setRouteMode("coche");
               setDepartureTime("");
+              setIsUserLocation(false);
               toast.info("Ruta finalizada");
             }}
           />
@@ -259,6 +262,9 @@ const HomePage = () => {
             markers={markers}
             places={places}
             routeResult={routeResult}
+            originText={routeOriginLabel}
+            destText={routeDestLabel}
+            isUserLocation={isUserLocation}            
             zones={zones}
             tempZone={tempZone}
             isDrawingZone={isDrawingZone}
