@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { renderRouteLayer } from "@/components/routes/RouteLayer";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -9,50 +10,9 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
-// Icono verde para el punto de origen de la ruta
-const originIcon = new L.Icon({
-  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-
-// Icono rojo para el punto de destino de la ruta
-const destIcon = new L.Icon({
-  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-
-// icono azul para la ubicación actual del usuario (si se muestra como origen)
-const liveUserIcon = L.divIcon({
-  className: "",
-  html: `
-    <div style="
-      width: 18px;
-      height: 18px;
-      background: #2563EB;
-      border: 3px solid white;
-      border-radius: 50%;
-      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
-    "></div>
-  `,
-  iconSize: [18, 18],
-  iconAnchor: [9, 9],
-});
-
-// Orden de los días de la semana (0 = lunes, 6 = domingo)
-const dayOrder = [0, 1, 2, 3, 4, 5, 6];
-const dayNames = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
-
 // Formatea una hora tipo "07:30:00" → "7:30"
 function formatHour(hour) {
-  if (!hour) return "--"; // si no hay hora, devuelve placeholder
+  if (!hour) return "--";
 
   const [h, m] = hour.split(":");
   return `${parseInt(h, 10)}:${m}`;
@@ -74,9 +34,8 @@ function minutesToHour(minutes) {
 
 // Une tramos horarios que se solapan o son consecutivos
 function mergeRanges(ranges) {
-  if (!ranges.length) return []; // si no hay datos, devuelve vacío
-  
-  // Ordena los tramos por hora de apertura
+  if (!ranges.length) return [];
+
   const sorted = [...ranges].sort(
     (a, b) => timeToMinutes(a.open_time) - timeToMinutes(b.open_time)
   );
@@ -87,12 +46,12 @@ function mergeRanges(ranges) {
     start: timeToMinutes(sorted[0].open_time),
     end: timeToMinutes(sorted[0].close_time),
   };
-  // Recorre el resto de tramos
+
   for (let i = 1; i < sorted.length; i++) {
     const nextStart = timeToMinutes(sorted[i].open_time);
     const nextEnd = timeToMinutes(sorted[i].close_time);
 
-     // Si se solapan o son continuos, los une
+    // Si se solapan o son continuos, los une
     if (nextStart <= current.end) {
       current.end = Math.max(current.end, nextEnd);
     } else {
@@ -121,7 +80,7 @@ function mergeRanges(ranges) {
 // Comprueba si un horario es válido para la fecha actual
 function isDateInRange(validFrom, validTo) {
   const today = new Date();
-  today.setHours(0, 0, 0, 0); // elimina horas para comparar solo fecha
+  today.setHours(0, 0, 0, 0);
 
   // Si no hay rango de fechas, se considera siempre válido
   if (!validFrom && !validTo) return true;
@@ -196,6 +155,7 @@ const MapView = ({
   isUserLocation,
   liveUserPosition,
   isRouteActive,
+  routeMode,
   zones,
   tempZone,
   isDrawingZone,
@@ -214,7 +174,8 @@ const MapView = ({
 
     // Añade la capa base de OpenStreetMap
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     }).addTo(map);
 
     layersRef.current.addTo(map);
@@ -233,8 +194,7 @@ const MapView = ({
     // Detecta clicks en el mapa y los envía al componente padre
     const handler = (e) => onMapClick(e.latlng.lat, e.latlng.lng);
     map.on("click", handler);
-    
-    // Elimina el listener al actualizar o desmontar
+
     return () => {
       map.off("click", handler);
     };
@@ -242,23 +202,22 @@ const MapView = ({
 
   useEffect(() => {
     const group = layersRef.current;
+    const map = mapRef.current;
+  if (!group || !map) return;
+
     group.clearLayers();
 
-    const hasActiveRoute =
-  routeResult &&
-  routeResult.geometry &&
-  routeResult.geometry.length > 0;
 
-  // Solo mostrar marcadores si NO hay una ruta activa
-if (!hasActiveRoute) {
-  // Marcadores creados manualmente por el usuario
-  markers.forEach((marker, index) => {
-    L.marker([marker.lat, marker.lng])
-      .bindPopup(`Punto ${index + 1}`)
-      .addTo(group);
-  });
+    const hasActiveRoute = routeResult?.geometry?.length > 0;
+    if (!hasActiveRoute) {
+    // Marcadores creados manualmente por el usuario
+    markers.forEach((marker, index) => {
+      L.marker([marker.lat, marker.lng])
+        .bindPopup(`Punto ${index + 1}`)
+        .addTo(group);
+    });
 
-  // Lugares cargados desde backend
+    // Lugares cargados desde backend
   places?.forEach((place) => {
     const marker = L.marker([place.lat, place.lon]).addTo(group);
 
@@ -286,83 +245,48 @@ if (!hasActiveRoute) {
   });
 }
 
-    // Ruta calculada
-    const originLabel = isUserLocation ? "Estás aquí" : (originText || "Origen");
-    const destinationLabel = destText || "Destino";
+  // Ruta calculada
+  if (routeResult?.geometry?.length) {
+    renderRouteLayer(
+      group,
+      map,
+      routeResult,
+      originText,
+      destText,
+      isUserLocation,
+      liveUserPosition,
+      isRouteActive,
+      routeMode
+    );
+  }
 
-    if (routeResult) {
-      const currentOrigin =
-        isRouteActive && liveUserPosition
-          ? liveUserPosition
-          : routeResult.originCoord;
-
-      if (isRouteActive && liveUserPosition) {
-        L.marker([liveUserPosition.lat, liveUserPosition.lng], { icon: liveUserIcon })
-          .bindPopup("Estás aquí")
-          .addTo(group);
-
-        L.circle([liveUserPosition.lat, liveUserPosition.lng], {
-          radius: liveUserPosition.accuracy || 20,
-          color: "#3B82F6",
-          fillColor: "#60A5FA",
-          fillOpacity: 0.15,
-          weight: 1,
-        }).addTo(group);
-      } else {
-        L.marker([currentOrigin.lat, currentOrigin.lng], { icon: originIcon })
-          .bindPopup(originLabel)
-          .addTo(group);
+  // Zonas guardadas
+  zones.forEach((zone) => {
+    L.polygon(
+      zone.points.map((point) => [point.lat, point.lng]),
+      {
+        color: "#0B1B3A",
+        fillColor: "#06B6D4",
+        fillOpacity: 0.2,
+        weight: 2,
       }
+    ).addTo(group);
+  });
 
-      L.marker([routeResult.destCoord.lat, routeResult.destCoord.lng], { icon: destIcon })
-        .bindPopup(destinationLabel)
-        .addTo(group);
-
-      const polyline = L.polyline(routeResult.geometry, {
+  // Zona temporal mientras se está dibujando
+  if (isDrawingZone && tempZone.length > 0) {
+    L.polygon(
+      tempZone.map((point) => [point.lat, point.lng]),
+      {
         color: "#06B6D4",
-        weight: 4,
-        opacity: 0.9,
-        lineCap: "round",
-        lineJoin: "round",
-      }).addTo(group);
-
-      if (mapRef.current) {
-        if (isRouteActive && liveUserPosition) {
-          mapRef.current.setView([liveUserPosition.lat, liveUserPosition.lng], 16);
-        } else {
-          mapRef.current.fitBounds(polyline.getBounds(), { padding: [40, 40] });
-        }
+        fillColor: "#06B6D4",
+        fillOpacity: 0.1,
+        weight: 2,
+        dashArray: "6 4",
       }
-    }
-    
-    // Zonas guardadas
-    zones.forEach((zone) => {
-      L.polygon(
-        zone.points.map((point) => [point.lat, point.lng]),
-        {
-          color: "#0B1B3A",
-          fillColor: "#06B6D4",
-          fillOpacity: 0.2,
-          weight: 2,
-        }
-      ).addTo(group);
-    });
-
-    // Zona temporal mientras se está dibujando
-    if (isDrawingZone && tempZone.length > 0) {
-      L.polygon(
-        tempZone.map((point) => [point.lat, point.lng]),
-        {
-          color: "#06B6D4",
-          fillColor: "#06B6D4",
-          fillOpacity: 0.1,
-          weight: 2,
-          dashArray: "6 4",
-        }
-      ).addTo(group);
-    }
-}, [markers, places, routeResult,originText,destText, isUserLocation, liveUserPosition, isRouteActive, zones, tempZone, isDrawingZone, onLoadPlaceHours]);
-
+    ).addTo(group);
+  }
+}, [markers, places, routeResult, originText, destText, isUserLocation, liveUserPosition, isRouteActive, routeMode, zones, tempZone, isDrawingZone, onLoadPlaceHours,]);
   return <div ref={containerRef} className="w-full h-full min-h-[400px] rounded-lg" />;
 };
 

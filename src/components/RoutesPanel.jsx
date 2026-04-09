@@ -6,11 +6,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 const SPEED_KMH = { car: 80, foot: 5, bike: 15 };
 
 const TRANSPORT_MODES = [
-  { id: "car", label: "Coche", icon: Car, osrm: "driving", modeKey: "coche" },
-  { id: "foot", label: "A pie", icon: Footprints, osrm: "walking", modeKey: "apie" },
-  { id: "bike", label: "Bicicleta", icon: Bike, osrm: "cycling", modeKey: "bici" },
-  { id: "bus", label: "Autobús", icon: Bus, osrm: "", modeKey: "", disabled: true },
-  { id: "train", label: "Tren", icon: TrainFront, osrm: "", modeKey: "", disabled: true },
+  { id: "car", label: "Coche", icon: Car, osrm: "driving" },
+  { id: "foot", label: "A pie", icon: Footprints, osrm: "walking" },
+  { id: "bike", label: "Bicicleta", icon: Bike, osrm: "cycling"},
+  { id: "bus", label: "Autobús", icon: Bus, osrm: "", disabled: true },
+  { id: "train", label: "Tren", icon: TrainFront, osrm: "", disabled: true },
 ];
 
 function useNominatimSearch(query) {
@@ -188,7 +188,7 @@ const RoutesPanel = ({ routeResult, onCalculate, isRouteActive, onStartRoute, on
       );
 
       const result = { originCoord, destCoord, geometry, distance: distKm, duration: durMin };
-      onCalculate(result, originText, destText, modeConfig.modeKey, departureTime, isUserLocation);
+      onCalculate(result, originText, destText, mode, departureTime, isUserLocation);
     } catch {
       setError("No se ha encontrado una ruta para ese modo");
     } finally {
