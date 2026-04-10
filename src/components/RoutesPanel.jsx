@@ -324,7 +324,8 @@ const RoutesPanel = ({ routeResult, onCalculate, isRouteActive, onStartRoute, on
                   <IconComp className="w-4 h-4" />{t.label}
                 </button>
               );
-              {/* Si el modo de transporte está deshabilitado, envuelve el botón en un tooltip explicativo */}
+              
+              // Si el modo de transporte está deshabilitado, muestra un tooltip 
               if (t.disabled) {
                 return (
                   <Tooltip key={t.id}>
@@ -406,6 +407,9 @@ const RoutesPanel = ({ routeResult, onCalculate, isRouteActive, onStartRoute, on
         <span>Añadir destino</span>
       </button>
         
+      {/* Selector visual de salida */}
+      <TimeSelector />
+
       {/* Selección de hora de salida (opcional) y cálculo de ruta */}  
       <div className="flex flex-col gap-1">
         <label className="text-xs font-semibold text-foreground uppercase tracking-wide flex items-center gap-1.5">
@@ -490,4 +494,43 @@ const RoutesPanel = ({ routeResult, onCalculate, isRouteActive, onStartRoute, on
   );
 };
 
+const TimeSelector = () => {
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState("Salir ahora");
+
+  const options = [
+    "Salir ahora",
+    "Salir a las",
+    "Llegar antes de las",
+  ];
+
+  return (
+    <div className="relative inline-block">
+      <button
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex items-center gap-2 px-3 py-2 rounded-full border border-border bg-card text-sm text-foreground hover:bg-secondary transition-colors"
+      >
+        <Clock className="w-4 h-4" />
+        {selected}
+      </button>
+
+      {open && (
+        <div className="absolute mt-2 w-[180px] bg-card border border-border rounded-md shadow-lg z-50">
+          {options.map((opt) => (
+            <button
+              key={opt}
+              onClick={() => {
+                setSelected(opt);
+                setOpen(false);
+              }}
+              className="w-full text-left px-3 py-2 text-sm hover:bg-secondary transition-colors"
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 export default RoutesPanel;
