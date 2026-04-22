@@ -21,11 +21,11 @@ const MODE_LABELS = {
 
 /**
  * Panel lateral de itinerarios:
-  * permite elegir modos, fecha y hora
+  * permite elegir ciudad, modos, fecha y hora
   * lanza la búsqueda de itinerarios
   * muestra el ranking o el detalle del itinerario seleccionado
  */
-const RoutesPanel = ({ selectedCity, onChangeCity, itineraries, itineraryLegs, itinerariesLoading, itinerariesError, onLoadItineraries, onSelectItinerary }) => {
+const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, itineraryLegs, itinerariesLoading, itinerariesError, onLoadItineraries, onSelectItinerary }) => {
   const [modes, setModes] = useState(["good"]);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
@@ -51,6 +51,25 @@ const RoutesPanel = ({ selectedCity, onChangeCity, itineraries, itineraryLegs, i
       return [...withoutGood, modeId];
     });
   };
+
+
+  // Lista completa de ciudades disponibles en la app
+  const ALL_CITIES = [
+    { value: "alicante", label: "Alicante" },
+    { value: "elche", label: "Elche" },
+    { value: "valencia", label: "Valencia" },
+    { value: "peñiscola", label: "Peñíscola" },
+  ];
+
+  // Ciudades que se mostrarán en el desplegable según lo contratado
+  const availableCities =
+    allowedZones?.includes("*")
+      ? ALL_CITIES
+      : ALL_CITIES.filter((city) =>
+          allowedZones?.some(
+            (zone) => zone.toLowerCase() === city.value.toLowerCase()
+          )
+        );
 
   // Extrae las paradas del itinerario a partir del string "A → B → C"
   const getItineraryStops = (itinerary) => {
@@ -108,7 +127,7 @@ const RoutesPanel = ({ selectedCity, onChangeCity, itineraries, itineraryLegs, i
   // Búsqueda solo si hay fecha y hora
   // No hay: botón desactivado
   const handleSearchItineraries = () => {
-    if (!date || !time) {
+    if (!selectedCity || !date || !time) {
       return;
     }
 
@@ -156,12 +175,18 @@ const RoutesPanel = ({ selectedCity, onChangeCity, itineraries, itineraryLegs, i
           <select
             value={selectedCity}
             onChange={(e) => onChangeCity(e.target.value)}
-            className="h-[44px] rounded-md border border-input bg-card pl-5 pr-1 text-sm text-foreground"          
+            className="h-[48px] rounded-2xl border border-border bg-white px-4 pr-10 text-sm text-foreground shadow-sm transition-all 
+                      focus:outline-none focus:ring-2 focus:ring-azul/30 hover:border-azul/40"
           >
-            <option value="alicante">Alicante</option>
-            <option value="elche">Elche</option>
-            <option value="valencia">Valencia</option>
-            <option value="peñiscola">Peñíscola</option>          
+            <option value="" disabled>
+              Selecciona destino
+            </option>
+            
+            {availableCities.map((city) => (
+              <option key={city.value} value={city.value}>
+                {city.label}
+              </option>
+            ))}
           </select>
         </div>
       
@@ -197,7 +222,7 @@ const RoutesPanel = ({ selectedCity, onChangeCity, itineraries, itineraryLegs, i
           {/* BOTON BUSQUEDA */}
           <button
             onClick={handleSearchItineraries}
-            disabled={itinerariesLoading || !date || !time}
+            disabled={itinerariesLoading || !selectedCity || !date || !time}
             className="h-[44px] rounded-md bg-verde text-white text-sm font-medium hover:bg-verde-oscuro transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {itinerariesLoading ? "Buscando..." : "Buscar itinerarios"}

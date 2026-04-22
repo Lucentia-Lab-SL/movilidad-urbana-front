@@ -39,7 +39,7 @@ const HomePage = () => {
   const [itineraryLegs, setItineraryLegs] = useState([]);
 
   // Ciudad actualmente seleccionada en el panel.
-  const [selectedCity, setSelectedCity] = useState("alicante");
+  const [selectedCity, setSelectedCity] = useState("");
 
   // Comprbar el acceso desde el back y zonas permitidas
   useEffect(() => {
@@ -239,6 +239,29 @@ if (!segments.length) {
     }
   }, [fetchApi, canAccessMap]);
 
+  /** 
+   * Muestra ciudad permitida para usuario y seleciona 
+   * Si tiene acceso a todas ("*"), mantiene la lista completa
+   * Si la ciudad actual no está permitida, se cambia a la primera disponible
+   */
+  useEffect(() => {
+    if (!allowedZones || allowedZones.length === 0) return;
+
+    const allCities = ["alicante", "elche", "valencia", "peñiscola"];
+
+    const availableCities = allowedZones.includes("*")
+      ? allCities
+      : allCities.filter((city) =>
+          allowedZones.some((zone) => zone.toLowerCase() === city.toLowerCase())
+        );
+
+    if (availableCities.length === 0) return;
+
+    if (selectedCity && !availableCities.includes(selectedCity)) {
+      setSelectedCity("");
+    }
+  }, [allowedZones, selectedCity]);
+
   useEffect(() => {
     if (!canAccessMap) return;
 
@@ -378,6 +401,7 @@ const getPointInfo = async (lat, lng) => {
           <RoutesPanel
             selectedCity={selectedCity}
             onChangeCity={setSelectedCity}
+            allowedZones={allowedZones}
             itineraries={itineraries}
             itineraryLegs={itineraryLegs}
             itinerariesLoading={itinerariesLoading}
@@ -399,6 +423,7 @@ const getPointInfo = async (lat, lng) => {
             onLoadPlaceHours={getPlaceHours}
             allowedZones={allowedZones} 
             itineraryStops={itineraryStops}
+            selectedCity={selectedCity}
 
           />
         

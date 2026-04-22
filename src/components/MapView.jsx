@@ -194,6 +194,7 @@ const MapView = ({
   onMapClick,
   onLoadPlaceHours,
   itineraryStops,
+  selectedCity,
   
 }) => {
   const { fetchApi } = useApi();
@@ -201,12 +202,32 @@ const MapView = ({
   const containerRef = useRef(null);
   const layersRef = useRef(L.layerGroup());
 
+  const CITY_VIEWS = {
+    alicante: { center: [38.3452, -0.481], zoom: 13 },
+    elche: { center: [38.2699, -0.7126], zoom: 13 },
+    valencia: { center: [39.4699, -0.3763], zoom: 13 },
+    peñiscola: { center: [40.3574, 0.4069], zoom: 13 },
+  };
+
+  //mover el mapa 
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !selectedCity) return;
+
+    const cityView = CITY_VIEWS[selectedCity.toLowerCase()];
+    if (!cityView) return;
+
+    map.flyTo(cityView.center, cityView.zoom, {
+      duration: 1.2,
+    });
+  }, [selectedCity]);
+
   // Inicializa el mapa solo una vez
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    // Crea el mapa centrado inicialmente en Alicante
-    const map = L.map(containerRef.current).setView([38.3452, -0.481], 13);
+    // Crea el mapa centrado inicialmente en ESPAÑA
+    const map = L.map(containerRef.current).setView([40.4168, -3.7038], 6);
 
     // Añade la capa base de OpenStreetMap
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
