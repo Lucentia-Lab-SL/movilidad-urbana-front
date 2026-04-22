@@ -11,6 +11,7 @@ const HomePage = () => {
   const authUser = getAuthUser();
   const { fetchApi } = useApi();
 
+  // usuario con acceso a la web/mapa
   const [canAccessMap, setCanAccessMap] = useState(null);
   const [accessLoading, setAccessLoading] = useState(true);
 
@@ -24,17 +25,23 @@ const HomePage = () => {
   const [selectedPoint, setSelectedPoint] = useState(null);
   const [routeResult, setRouteResult] = useState(null);
   
+  // ciudades/ zonas que el usuario tiene acceso
   const [allowedZones, setAllowedZones] = useState([]);
 
+  // Estado del bloque de itinerarios:
+  // - lista de itinerarios
+  // - estado de carga/error
+  // - paradas y legs del itinerario seleccionado
   const [itineraries, setItineraries] = useState([]);
   const [itinerariesLoading, setItinerariesLoading] = useState(false);
   const [itinerariesError, setItinerariesError] = useState(""); 
   const [itineraryStops, setItineraryStops] = useState([]);
   const [itineraryLegs, setItineraryLegs] = useState([]);
 
+  // Ciudad actualmente seleccionada en el panel.
   const [selectedCity, setSelectedCity] = useState("alicante");
 
-  // Comprbar el acceso desde el back
+  // Comprbar el acceso desde el back y zonas permitidas
   useEffect(() => {
   async function checkAccess() {
     try {
@@ -52,8 +59,8 @@ const HomePage = () => {
   checkAccess();
 }, [fetchApi]);
 
-// cargar itinerarios desde el back
-const loadItineraries = async (date, time, mode) => {
+// cargar itinerarios desde el back segun fecha, hora, ciudad y modos
+const loadItineraries = async (date, time, modes) => {
   try {
     setItinerariesLoading(true);
     setItinerariesError("");
@@ -61,8 +68,13 @@ const loadItineraries = async (date, time, mode) => {
     setItineraryStops([]);
     
     const now = new Date();
-    const fechaInicio = date ? date.replaceAll("-", "") : `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
-    const horaInicio = time ? time.split(":")[0] : String(now.getHours()).padStart(2, "0");
+    const fechaInicio = date 
+    ? date.replaceAll("-", "") 
+    : `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+   
+    const horaInicio = time 
+    ? time.split(":")[0] 
+    : String(now.getHours()).padStart(2, "0");
   
     const params = new URLSearchParams({
       city: selectedCity,
@@ -71,8 +83,11 @@ const loadItineraries = async (date, time, mode) => {
       max_itineraries: "30",
     });
 
-    if (mode) {
-      params.append("allowed_modes", mode);
+    // Solo se envían modos al backend si el usuario ha elegido modos manuales.
+    if (Array.isArray(modes) && modes.length > 0 && !modes.includes("good")) {
+      modes.forEach((mode) => {
+        params.append("allowed_modes", mode);
+      });
     }
 
     const data = await fetchApi(
@@ -83,17 +98,20 @@ const loadItineraries = async (date, time, mode) => {
 
     setItineraries(data.itineraries || []);
     setItineraryLegs(data.legs || []);
+    console.log("MODOS ENVIADOS:", modes);
     console.log("PRIMER ITINERARIO:", data?.itineraries?.[0]);
     console.log("LEGS:", data?.legs);
   } catch (err) {
     console.error("Error cargando itinerarios:", err);
     setItinerariesError("Error al cargar itinerarios. Inténtalo más tarde");
     setItineraries([]);
+    setItineraryLegs([]);
   } finally {
     setItinerariesLoading(false);
   }
 };
 
+// Modifica textos para poder comparar nombres ignorando mayúsculas y acentos.
 const normalizeText = (text) =>
   (text || "")
     .toLowerCase()
@@ -101,7 +119,12 @@ const normalizeText = (text) =>
     .replace(/[\u0300-\u036f]/g, "")
     .trim();
 
-
+/**
+ * Cuando el usuario selecciona un itinerario del ranking:
+  * busca sus lugares reales en el array de places
+  * construye los segmentos uno a uno consultando /routes/search
+  * genera la estructura final que MapView necesita para pintarlo
+ */
 const handleSelectItinerary = async (itinerary) => {
   try {
     if (!itinerary?.visit_order_names) {
@@ -126,6 +149,7 @@ const handleSelectItinerary = async (itinerary) => {
       return;
     }
 
+    // Guarda las paradas para colocar los marcadores A, B, C... en el mapa.
     setItineraryStops(
       matchedPlaces.map((p) => ({
         lat: p.lat,
@@ -138,12 +162,14 @@ const handleSelectItinerary = async (itinerary) => {
     let totalDistanceM = 0;
     let totalDurationS = 0;
 
+    // Recorre cada tramo entre dos paradas consecutivas del itinerario.
     for (let i = 0; i < matchedPlaces.length - 1; i++) {
       const fromPlace = matchedPlaces[i];
       const toPlace = matchedPlaces[i + 1];
 
+      // Usa el modo real que haya elegido el backend para ese tramo
       const displayMode = itinerary.modes_used?.[i] || "drive";
-      const apiMode = displayMode === "drive" ? "drive_service" : displayMode;
+      const apiMode = displayMode;
 
       const routes = await fetchApi(
         `/routes/search?from_place_id=${fromPlace.place_id}&to_place_id=${toPlace.place_id}&mode=${apiMode}`,
@@ -157,6 +183,8 @@ const handleSelectItinerary = async (itinerary) => {
 
       if (!route?.geometry?.coordinates?.length) continue;
 
+      // Guarda cada segmento con su geometría y su modo para que el mapa
+      // pinta tramo a tramo.
       segments.push({
         ...route,
         mode: displayMode,
@@ -224,6 +252,8 @@ if (!segments.length) {
     }
   }, [authUser, canAccessMap]);
 
+// Hace reverse geocoding sobre una coordenada para mostrar información legible
+// cuando el usuario pulsa sobre un punto libre del mapa
 const getPointInfo = async (lat, lng) => {
   try {
     const res = await fetch(
@@ -271,8 +301,11 @@ const getPointInfo = async (lat, lng) => {
   }
 };
 
-
-// Manejo de clicks en el mapa para agregar marcadores o puntos de zona
+ /**
+  * Maneja los clics en el mapa:
+    * si se está dibujando una zona, añade un nuevo punto al polígono temporal
+    * si no, obtiene la información del punto pulsado y muestra su tarjeta
+  */
   const handleMapClick = useCallback(
   async (lat, lng) => {
     if (isDrawingZone) {
@@ -296,13 +329,15 @@ const getPointInfo = async (lat, lng) => {
     return [];
   }
 };
-
+  
+//Guarda en estado la ruta o itinerario
   const handleRouteCalculated = (result, mode ) => {
     setRouteResult(result);
     setRouteMode(mode);
   };
 
 
+  // Pantalla carga mientras se valida el acceso del usuario
   if (accessLoading) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -311,6 +346,7 @@ const getPointInfo = async (lat, lng) => {
   );
 }
 
+  // Si no tiene acceso, se muestra la pantalla de acceso denegado
   if (!canAccessMap) {
     return <AccessDenied />;
   }
