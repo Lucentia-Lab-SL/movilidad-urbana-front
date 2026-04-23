@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Route as RouteIcon, Car, Footprints, Bike, BusFront, Sparkles, Bookmark } from "lucide-react";
 
 // Modulos de transporte disponibles 
@@ -25,11 +25,13 @@ const MODE_LABELS = {
   * lanza la búsqueda de itinerarios
   * muestra el ranking o el detalle del itinerario seleccionado
  */
-const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, itineraryLegs, itinerariesLoading, itinerariesError, onLoadItineraries, onSelectItinerary }) => {
+const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, itineraryLegs, itinerariesLoading, itinerariesError, onLoadItineraries, onSelectItinerary, places, selectedPlaceIds, onChangeSelectedPlaceIds }) => {
   const [modes, setModes] = useState(["good"]);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [selectedItineraryDetail, setSelectedItineraryDetail] = useState(null);
+
+  const NORMAL_MODES = ["drive", "walk", "bike", "drive_service"];
 
   // Selección de modos de transporte.
   const toggleMode = (modeId) => {
@@ -42,13 +44,27 @@ const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, it
       // Si pulsa un modo normal y estaba "good", lo quita
       const withoutGood = prev.filter((m) => m !== "good");
       
+      let updated;
+
       // Si el modo ya estaba activo, lo desactiva.
       if (withoutGood.includes(modeId)) {
-        const updated = withoutGood.filter((m) => m !== modeId);
+        updated = withoutGood.filter((m) => m !== modeId);
         return updated.length > 0 ? updated : withoutGood;
       }
 
-      return [...withoutGood, modeId];
+      // Si no estaba activo, lo añade
+      updated = [...withoutGood, modeId];
+
+      // Si están los 4 modos normales activos, lo convertimos a "good"
+      const hasAllNormalModes = NORMAL_MODES.every((mode) =>
+        updated.includes(mode)
+      );
+
+      if (hasAllNormalModes) {
+        return ["good"];
+      }
+
+      return updated;
     });
   };
 
@@ -70,6 +86,19 @@ const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, it
             (zone) => zone.toLowerCase() === city.value.toLowerCase()
           )
         );
+  // Lugares de la ciudad seleccionada
+  const cityPlaces = (places || []).filter((place) =>
+    place.name?.toLowerCase().includes(selectedCity?.toLowerCase())
+  );
+
+  //marcar o desmarcar lugar de ciudad
+  const togglePlaceSelection = (placeId) => {
+    if (selectedPlaceIds.includes(placeId)) {
+      onChangeSelectedPlaceIds(selectedPlaceIds.filter((id) => id !== placeId));
+    } else {
+      onChangeSelectedPlaceIds([...selectedPlaceIds, placeId]);
+    }
+  };
 
   // Extrae las paradas del itinerario a partir del string "A → B → C"
   const getItineraryStops = (itinerary) => {
@@ -131,8 +160,12 @@ const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, it
       return;
     }
 
-    onLoadItineraries(date, time, modes);
+    onLoadItineraries(date, time, modes, selectedPlaceIds);
   };
+
+  useEffect(() => {
+    setSelectedItineraryDetail(null);
+  }, [selectedCity]);
 
     // Panel de itinerarios: filtros, hora de salida y ranking de resultados
     return (
@@ -174,7 +207,10 @@ const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, it
           </label>
           <select
             value={selectedCity}
-            onChange={(e) => onChangeCity(e.target.value)}
+            onChange={(e) => {
+              onChangeCity(e.target.value);
+              onChangeSelectedPlaceIds([]); // Limpiar selección de lugares al cambiar de ciudad
+            }}
             className="h-[48px] rounded-2xl border border-border bg-white px-4 pr-10 text-sm text-foreground shadow-sm transition-all 
                       focus:outline-none focus:ring-2 focus:ring-azul/30 hover:border-azul/40"
           >
@@ -190,6 +226,27 @@ const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, it
           </select>
         </div>
       
+      {/* LUGARES DE LA CIUDAD */}
+      {selectedCity && cityPlaces.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-semibold text-foreground uppercase tracking-wide">
+            Lugares
+          </label>
+
+          <div className="rounded-xl border border-border bg-card p-3 max-h-[180px] overflow-y-auto flex flex-col gap-2">
+            {cityPlaces.map((place) => (
+              <label key={place.place_id} className="flex items-center gap-2 text-sm text-foreground">
+                <input
+                  type="checkbox"
+                  checked={selectedPlaceIds.includes(place.place_id)}
+                  onChange={() => togglePlaceSelection(place.place_id)}
+                />
+                <span>{place.name}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
         {/* Fecha */}
         <div className="flex gap-2">
           <div className="flex-1 flex flex-col gap-1">

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { LogIn } from "lucide-react";
+import { useApi } from "@/hooks/useApi";
 import fondoCiudad from "@/assets/fondo1-mobility.png";
 import logo from "@/assets/logo-mobility.png";
 import tituloMovilidad from "@/assets/titulo-mobility.png";
@@ -11,6 +11,7 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const { fetchApi } = useApi();
 
   const handleFirebaseLogin = async () => {
     setLoading(true);
@@ -24,7 +25,15 @@ const LoginPage = () => {
       localStorage.setItem("firebaseToken", token);
       localStorage.setItem("user", result.user.email || result.user.uid);
 
-      navigate("/mapa");
+      const data = await fetchApi("/me/access", {}, true);
+
+      if (data.serviceType?.includes("itinerarios")) {
+        navigate("/mapa");
+      } else if (data.serviceType?.includes("aforos")) {
+        navigate("/zonas");
+      } else {
+        navigate("/no-access");
+      }
     } catch (err) {
       setError("Error en login: " + err.message);
     } finally {

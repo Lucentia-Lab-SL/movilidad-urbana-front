@@ -12,7 +12,7 @@ const HomePage = () => {
   const { fetchApi } = useApi();
 
   // usuario con acceso a la web/mapa
-  const [canAccessMap, setCanAccessMap] = useState(null);
+  const [hasAccess, setHasAccess] = useState(null);
   const [accessLoading, setAccessLoading] = useState(true);
 
   const [places, setPlaces] = useState([]);
@@ -20,10 +20,11 @@ const HomePage = () => {
   const [zones, setZones] = useState([]);
   const [isDrawingZone, setIsDrawingZone] = useState(false);
   const [tempZone, setTempZone] = useState([]);
-
+  const [serviceType, setServiceType] = useState([]);
   const [routeMode, setRouteMode] = useState("drive");
   const [selectedPoint, setSelectedPoint] = useState(null);
   const [routeResult, setRouteResult] = useState(null);
+  const [selectedPlaceIds, setSelectedPlaceIds] = useState([]);
   
   // ciudades/ zonas que el usuario tiene acceso
   const [allowedZones, setAllowedZones] = useState([]);
@@ -46,12 +47,13 @@ const HomePage = () => {
   async function checkAccess() {
     try {
       const data = await fetchApi("/me/access", {}, true);
-      setCanAccessMap(data.mapAccess);
+      setHasAccess(data.access);
       setAllowedZones(data.allowedZones || []);
+      setServiceType(data.serviceType || []);
       
     } catch (error) {
       console.error("Error comprobando acceso:", error);
-      setCanAccessMap(false);
+      setHasAccess(false);
     } finally {
       setAccessLoading(false);
     }
@@ -60,7 +62,7 @@ const HomePage = () => {
 }, [fetchApi]);
 
 // cargar itinerarios desde el back segun fecha, hora, ciudad y modos
-const loadItineraries = async (date, time, modes) => {
+const loadItineraries = async (date, time, modes, selectedPlaceIds) => {
   try {
     setItinerariesLoading(true);
     setItinerariesError("");
@@ -87,6 +89,12 @@ const loadItineraries = async (date, time, modes) => {
     if (Array.isArray(modes) && modes.length > 0 && !modes.includes("good")) {
       modes.forEach((mode) => {
         params.append("allowed_modes", mode);
+      });
+    }
+
+    if (Array.isArray(selectedPlaceIds) && selectedPlaceIds.length > 0) {
+      selectedPlaceIds.forEach((placeId) => {
+        params.append("selected_place_ids", placeId);
       });
     }
 
@@ -234,10 +242,10 @@ if (!segments.length) {
       }
     }
 
-    if (canAccessMap) {
+    if (hasAccess) {
       cargarPlaces();
     }
-  }, [fetchApi, canAccessMap]);
+  }, [fetchApi, hasAccess]);
 
   /** 
    * Muestra ciudad permitida para usuario y seleciona 
@@ -263,7 +271,7 @@ if (!segments.length) {
   }, [allowedZones, selectedCity]);
 
   useEffect(() => {
-    if (!canAccessMap) return;
+    if (!hasAccess) return;
 
     const selZoneKey = `selectedZone:${authUser}`;
     const selZone = loadJSON(selZoneKey, null);
@@ -273,7 +281,7 @@ if (!segments.length) {
       setZones([{ points: selZone.points }]);
       localStorage.removeItem(selZoneKey);
     }
-  }, [authUser, canAccessMap]);
+  }, [authUser, hasAccess]);
 
 // Hace reverse geocoding sobre una coordenada para mostrar información legible
 // cuando el usuario pulsa sobre un punto libre del mapa
@@ -359,6 +367,12 @@ const getPointInfo = async (lat, lng) => {
     setRouteMode(mode);
   };
 
+  // Al pulsar place, se muestra en el mapa. Si se pulsa otra vez, se oculta.
+  const visiblePlaces =
+  selectedPlaceIds.length > 0
+    ? places.filter((place) => selectedPlaceIds.includes(place.place_id))
+    : [];
+
 
   // Pantalla carga mientras se valida el acceso del usuario
   if (accessLoading) {
@@ -370,9 +384,21 @@ const getPointInfo = async (lat, lng) => {
 }
 
   // Si no tiene acceso, se muestra la pantalla de acceso denegado
-  if (!canAccessMap) {
+  if (!hasAccess) {
     return <AccessDenied />;
   }
+  if (!serviceType.includes("itinerarios")) {
+    return <AccessDenied />;
+  }
+
+  const handleChangeCity = (city) => {
+    setSelectedCity(city);
+    setSelectedPlaceIds([]);
+    setRouteResult(null);
+    setItineraryStops([]);
+    setItineraries([]);
+    setItineraryLegs([]);
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -400,7 +426,7 @@ const getPointInfo = async (lat, lng) => {
         
           <RoutesPanel
             selectedCity={selectedCity}
-            onChangeCity={setSelectedCity}
+            onChangeCity={handleChangeCity}
             allowedZones={allowedZones}
             itineraries={itineraries}
             itineraryLegs={itineraryLegs}
@@ -408,12 +434,15 @@ const getPointInfo = async (lat, lng) => {
             itinerariesError={itinerariesError}
             onLoadItineraries={loadItineraries}
             onSelectItinerary={handleSelectItinerary}
+            places={places}
+            selectedPlaceIds={selectedPlaceIds}
+            onChangeSelectedPlaceIds={setSelectedPlaceIds}  
           />
         </aside>
 
         <div className="flex-1 bg-card border border-border rounded-lg shadow-[var(--shadow-card)] overflow-hidden relative">
           <MapView
-            places={places}   
+            places={visiblePlaces}   
             routeResult={routeResult}
             routeMode={routeMode}       
             zones={zones}
