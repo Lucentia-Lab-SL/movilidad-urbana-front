@@ -23,13 +23,11 @@ const MODE_LABELS = {
  * Panel lateral de itinerarios:
   * permite elegir ciudad, modos, fecha y hora
   * lanza la búsqueda de itinerarios
-  * muestra el ranking o el detalle del itinerario seleccionado
  */
 const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, itineraryLegs, itinerariesLoading, itinerariesError, onLoadItineraries, onSelectItinerary, places, selectedPlaceIds, onChangeSelectedPlaceIds }) => {
   const [modes, setModes] = useState(["good"]);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
-  const [selectedItineraryDetail, setSelectedItineraryDetail] = useState(null);
 
   const NORMAL_MODES = ["drive", "walk", "bike", "drive_service"];
 
@@ -148,11 +146,6 @@ const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, it
     (a, b) => (a.total_time_min || 999999) - (b.total_time_min || 999999)
   );
 
-  // itinerario seleccionado, muestra los detalles
-  const detailLegs = selectedItineraryDetail
-    ? getLegsForItinerary(selectedItineraryDetail.itinerary_id)
-    : [];
-
   // Búsqueda solo si hay fecha y hora
   // No hay: botón desactivado
   const handleSearchItineraries = () => {
@@ -162,10 +155,6 @@ const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, it
 
     onLoadItineraries(date, time, modes, selectedPlaceIds);
   };
-
-  useEffect(() => {
-    setSelectedItineraryDetail(null);
-  }, [selectedCity]);
 
     // Panel de itinerarios: filtros, hora de salida y ranking de resultados
     return (
@@ -285,102 +274,7 @@ const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, it
             {itinerariesLoading ? "Buscando..." : "Buscar itinerarios"}
           </button>
 
-        
-          {/* ITINERARIO SELECCIONADO */}
-          {selectedItineraryDetail ? (
-            <div className="rounded-xl border border-border bg-card p-4 flex flex-col gap-4 shadow-sm">
-
-              {/* HEADER */}
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <div className="w-7 h-7 min-w-[28px] min-h-[28px] rounded-full flex items-center justify-center text-xs font-semibold text-white bg-verde-oscuro">
-                    A
-                  </div>
-
-                  <div>
-                    {/* uiIndex para que el título del detalle coincida con el número del ranking */}
-                    <h4 className="text-base font-semibold text-foreground leading-tight">
-                      Itinerario {selectedItineraryDetail.uiIndex || 1}
-                    </h4>
-
-                    <div className="text-xs text-muted-foreground mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <span>
-                        🕘 {(selectedItineraryDetail.start_datetime || "").slice(11, 16) || "--:--"} → {(selectedItineraryDetail.end_datetime || "").slice(11, 16) || "--:--"}
-                      </span>
-                      <span>
-                        ⏱ {Math.floor((selectedItineraryDetail.total_time_min || 0) / 60)} h 
-                        {Math.round((selectedItineraryDetail.total_time_min || 0) % 60)} min
-                      </span>
-                    </div>
-
-                    <div className="text-xs text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <span>
-                        {Array.isArray(selectedItineraryDetail.modes_used) &&
-                          selectedItineraryDetail.modes_used.length > 0
-                            ? [...new Set(selectedItineraryDetail.modes_used)]
-                                .map((m) => MODE_LABELS[m] || m)
-                                .join(", ")
-                            : "Sin modo"}
-                      </span>
-                      <span>
-                        {getItineraryStops(selectedItineraryDetail).length} paradas
-                      </span>
-                      <span>
-                        {Math.round((selectedItineraryDetail.total_distance_m || 0) / 1000 * 10) / 10} km
-                      </span>
-                    </div>
-                  </div>  
-                </div>
-
-                 {/* Acciones del panel de detalle */}
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="w-9 h-9 rounded-full border border-border bg-card flex items-center justify-center hover:bg-secondary transition"
-                  >
-                    <Bookmark className="w-4 h-4 text-foreground" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setSelectedItineraryDetail(null)}
-                    className="text-muted-foreground hover:text-foreground text-lg leading-none px-1"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-
-              {/* LISTA DE PARADAS */}
-              <div className="flex flex-col gap-4 pt-3 border-t border-border">
-                {getItineraryStops(selectedItineraryDetail).map((stop, index) => (
-                  <div key={index} className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3 min-w-0">
-                      <div className="w-5 h-5 min-w-[20px] min-h-[20px] rounded-full flex items-center justify-center text-[10px] font-semibold text-white mt-0.5 bg-azul">
-                        {String.fromCharCode(65 + index)}
-                      </div>
-
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground leading-snug">
-                          {stop}
-                        </p>
-
-                        <p className="text-xs text-muted-foreground mt-1">
-                          ⏱ {formatDuration(detailLegs[index]?.cost_time_s)}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="text-xs text-foreground whitespace-nowrap">
-                      {formatLegTime(detailLegs[index]?.visit_start_time)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-
-            /* Ranking de itinerarios disponibles ordenados por duración */
+            {/* Ranking de itinerarios disponibles ordenados por duración */}
             <div className="rounded-lg p-4 border border-border bg-card flex flex-col gap-3">
               <h4 className="text-xs font-bold uppercase">Ranking de itinerarios</h4>
 
@@ -396,7 +290,12 @@ const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, it
                   const totalMinutes = Math.round(it.total_time_min || 0);
                   const hours = Math.floor(totalMinutes / 60);
                   const minutes = totalMinutes % 60;
-
+                  const firstStopName = getItineraryStops(it)[0];
+                  const firstPlace = (places || []).find(
+                    (p) => p.name?.toLowerCase().trim() === firstStopName?.toLowerCase().trim()
+                  );
+                  const imageUrl = firstPlace?.image_url  || firstPlace?.img || "/placeholder-place.jpg";
+                  
                   const durationText =
                     hours > 0 ? `${hours} h ${minutes} min` : `${minutes} min`;
 
@@ -417,11 +316,10 @@ const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, it
                       key={it.itinerary_id || index}
                       type="button"
                       onClick={() => {
-                        setSelectedItineraryDetail({
+                        onSelectItinerary?.({
                           ...it,
                           uiIndex: index + 1
                         });
-                        onSelectItinerary?.(it);
                       }}
                       className={`w-full text-left rounded-xl border p-3 transition-all ${
                         index === 0
@@ -439,39 +337,41 @@ const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, it
                           {index + 1}
                         </div>
 
+                        {/* Imagen del primer lugar del itinerario */}
+                        <img
+                          src={imageUrl}
+                          alt={firstStopName || `Itinerario ${index + 1}`}
+                          className="w-20 h-16 rounded-lg object-cover shrink-0 bg-muted"
+                          onError={(e) => {
+                            e.currentTarget.src = "/placeholder-place.jpg";
+                          }}
+                        />
+
                         {/* Resumen del itinerario */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <h5 className="text-sm font-semibold text-foreground truncate">
-                                Itinerario {index + 1}
-                              </h5>
+                          <h5 className="text-sm font-semibold text-foreground truncate">
+                            Itinerario {index + 1}
+                          </h5>
 
-                              <div className="text-xs text-muted-foreground mt-1">
-                                {(it.start_datetime || "").slice(11, 16) || "--:--"} → {(it.end_datetime || "").slice(11, 16) || "--:--"}
-                              </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {(it.start_datetime || "").slice(11, 16) || "--:--"} →{" "}
+                            {(it.end_datetime || "").slice(11, 16) || "--:--"} · {durationText}
+                          </div>
 
-                              <div className="text-xs text-muted-foreground mt-1">
-                                {durationText}
-                              </div>
-
-                              <div className="text-xs text-muted-foreground mt-1">
-                                {modesText} · {stopsCount} paradas · {distanceKm} km
-                              </div>
-                            </div>
-
-                            <div className="text-muted-foreground text-lg leading-none shrink-0">
-                              ›
+                          <div className="text-xs text-muted-foreground mt-1 truncate">
+                              {modesText} · {stopsCount} paradas · {distanceKm} km
                             </div>
                           </div>
-                        </div>
+
+                          <div className="text-muted-foreground text-lg leading-none shrink-0">
+                            ›
+                          </div>
                       </div>
                     </button>
                   );
                 })}
               </div>
             </div>
-          )}
         </div>
       </>  
       );
