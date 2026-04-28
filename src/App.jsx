@@ -7,7 +7,7 @@ import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
 import ProfilePage from "./pages/ProfilePage";
 import RoutesListPage from "./pages/RoutesListPage";
-import ZonesListPage from "./pages/ZonesListPage";
+import AforosPage from "./pages/AforosPage";
 import NotFound from "./pages/NotFound";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 
@@ -38,7 +38,7 @@ const App = () => (
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/mapa" element={<PrivateRoute><HomePage /></PrivateRoute>} />
             <Route path="/rutas" element={<PrivateRoute><RoutesListPage /></PrivateRoute>} />
-            <Route path="/zonas" element={<PrivateRoute><ZonesListPage /></PrivateRoute>} />
+            <Route path="/zonas" element={<PrivateRoute><AforosPage /></PrivateRoute>} />
             <Route path="/perfil" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
