@@ -3,33 +3,25 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useApi } from "@/hooks/useApi";
 
-/**
- * Ejemplo nº de personas por distrito (ID del GeoJSON)
- * Luego cambiar por datos de BD
- */
-const mockAforos = {
-  "03002_AM": 1250,
-  "03005_AM": 420,
-  "03014": 980,
-};
+
 
 // Convertimos nº de personas → color
 const getColor = (personas) => {
-  if (personas > 1000) return "#7f0000";
-  if (personas > 500) return "#bd0026";
-  if (personas > 200) return "#f03b20";
-  if (personas > 100) return "#fd8d3c";
-  if (personas > 50) return "#feb24c";
-  if (personas > 20) return "#fed976";
-  if (personas > 10) return "#ffeda0";
+  if (personas > 10000) return "#7f0000";
+  if (personas > 5000) return "#bd0026";
+  if (personas > 2000) return "#f03b20";
+  if (personas > 1000) return "#fd8d3c";
+  if (personas > 500) return "#feb24c";
+  if (personas > 200) return "#fed976";
   return "#ffffcc";
 };
 
-const AforosMap = ({ city }) => {
+const AforosMap = ({ city, date, hour }) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const geoJsonLayerRef = useRef(null);
   const { fetchApi } = useApi();
+  const alertMarkersRef = useRef(null);
 
   // 1. Crear mapa 
   useEffect(() => {
@@ -42,27 +34,32 @@ const AforosMap = ({ city }) => {
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "Leaflet | © OpenStreetMap",
     }).addTo(mapInstanceRef.current);
+
+    alertMarkersRef.current = L.layerGroup().addTo(mapInstanceRef.current);
+
   }, []);
 
   // 2. Cargar GeoJSON y pintar distritos cada vez que cambie la ciudad
   useEffect(() => {
     const loadDistricts = async () => {
-        if (!city) return;
-        if (!mapInstanceRef.current) return;
+        if (!city || !date || !hour || !mapInstanceRef.current) return;
 
       // llamada a api para cargar geojson de distritos (según ciudad)
-      const geojson = await fetchApi(`/distritos?city=${city}`);
+      const geojson = await fetchApi(`/distritos/aforos?city=${city}&date=${date}&hour=${hour}`);
 
       //elimina capa anterior (si existe) antes de añadir la nueva
       if (geoJsonLayerRef.current) {
         geoJsonLayerRef.current.remove();
       }
 
+      if (alertMarkersRef.current) {
+        alertMarkersRef.current.clearLayers();
+      }
+
       //crear capa distritos y pintar cada uno
       geoJsonLayerRef.current = L.geoJSON(geojson, {
-        style: (feature) => {
-          const id = feature.properties.ID;
-          const personas = mockAforos[id] || 0;
+        style: (feature) => {          
+          const personas = feature.properties.personas_estimadas || 0;
 
           return {
             fillColor: getColor(personas),
@@ -71,16 +68,31 @@ const AforosMap = ({ city }) => {
             fillOpacity: 0.7,
           };
         },
+
+
         // popup con info del distrito
         onEachFeature: (feature, layer) => {
           const id = feature.properties.ID;
-          const personas = mockAforos[id] || 0;
+          const personas = feature.properties.personas_estimadas || 0;
 
           layer.bindPopup(`
             <strong>Distrito ${id}</strong><br/>
-            Personas aprox.: ${personas}
+            Personas aprox.:  ${Math.round(personas)}
           `);
-        },
+
+          if (personas > 10000) {
+            const center = layer.getBounds().getCenter();
+
+            const alertIcon = L.divIcon({
+              className: "",
+              html: `<div style="font-size: 14px;">⚠️</div>`,
+              iconSize: [18, 18],
+              iconAnchor: [9, 9],
+            });
+
+            L.marker(center, { icon: alertIcon }).addTo(alertMarkersRef.current);
+          }
+        }
       }).addTo(mapInstanceRef.current);
 
       // zoom automático para ajustar a los distritos
@@ -92,7 +104,7 @@ const AforosMap = ({ city }) => {
     };
 
     loadDistricts();
-  }, [city, fetchApi]);
+  }, [city, date, hour, fetchApi]);
 
   return <div ref={mapRef} className="w-full h-full rounded-xl" />;
 };
