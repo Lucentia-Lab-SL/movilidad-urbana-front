@@ -74,17 +74,17 @@ const AforosPanel = () => {
         <div className="rounded-xl bg-[#9ADE88]/30 border border-[#5B8B6C]/40 h-[48px] px-3 flex items-center gap-2">
           <MapPin className="w-5 h-5 text-[#5B8B6C]" />
           <div className="flex-1 flex flex-col justify-center">
-            <label className="text-xs text-[#5B8B6C]">Ciudad / Distrito</label>
+            <label className="text-xs text-[#5B8B6C]">Provincia</label>
             <select
               value={selectedCity}
               onChange={(e) => setSelectedCity(e.target.value)}
               className="w-full bg-transparent font-medium text-sm outline-none cursor-pointer text-[#0E448F]"
             >
-              <option value="">Selecciona ciudad</option>
+              <option value="">Selecciona provincia</option>
               <option value="alicante">Alicante</option>
-              <option value="elche">Elche</option>
               <option value="valencia">Valencia</option>
-              <option value="peniscola">Peñíscola</option>
+              <option value="elche">Elche</option>
+              <option value="peniscola">Peñiscola</option>
             </select>
           </div>
         </div>
@@ -130,7 +130,11 @@ const AforosPanel = () => {
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-5">
         {/* MAPA */}
         <div className="min-h-[320px] rounded-2xl border border-[#D6E5DB] shadow-md bg-[#F3F8F4] relative overflow-hidden">
-          <AforosMap city={appliedFilters.city} />
+          <AforosMap
+            city={appliedFilters.city}
+            date={appliedFilters.date}
+            hour={appliedFilters.hour}
+          />
         </div>
 
         {/* LEYENDA + ALERTA */}
@@ -142,14 +146,13 @@ const AforosPanel = () => {
 
             <div className="flex flex-col gap-2 text-xs">
               {[
-                ["bg-yellow-100", "0 – 10"],
-                ["bg-yellow-300", "10 – 20"],
-                ["bg-orange-300", "20 – 50"],
-                ["bg-orange-400", "50 – 100"],
-                ["bg-red-400", "100 – 200"],
-                ["bg-red-500", "200 – 500"],
-                ["bg-red-700", "500 – 1000"],
-                ["bg-red-950", "1000+"],
+                ["bg-yellow-100", "0 – 200"],
+                ["bg-yellow-300", "200 – 500"],
+                ["bg-orange-300", "500 – 1000"],
+                ["bg-orange-400", "1000 – 2000"],
+                ["bg-red-500", "2000 – 5000"],
+                ["bg-red-700", "5000 – 10000"],
+                ["bg-red-950", "10000+"],
               ].map(([color, label]) => (
                 <div key={label} className="flex items-center gap-3">
                   <span className={`w-4 h-4 rounded-full ${color}`} />
