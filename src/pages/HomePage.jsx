@@ -11,6 +11,29 @@ import { Car, Footprints, Bike, BusFront } from "lucide-react";
 // Las rutas de Peñíscola están guardadas con la eñe descompuesta (n + tilde).
 const cityForApi = (city) => (city === "peniscola" ? "pen\u0303iscola" : city);
 
+const routeGeometryCache = new Map();
+
+async function loadRouteGeometries(fetchApi, city) {
+  if (routeGeometryCache.has(city)) return routeGeometryCache.get(city);
+
+  const geojson = await fetchApi(
+    `/routes/graph?city=${encodeURIComponent(city)}`,
+    {},
+    true
+  );
+  const byRouteId = new Map();
+
+  for (const feature of geojson?.features || []) {
+    const routeId = feature?.properties?.route_id;
+    if (routeId && feature.geometry?.coordinates?.length) {
+      byRouteId.set(routeId, feature.geometry);
+    }
+  }
+
+  routeGeometryCache.set(city, byRouteId);
+  return byRouteId;
+}
+
 const HomePage = () => {
   const authUser = getAuthUser();
   const { fetchApi } = useApi();
@@ -197,7 +220,13 @@ const handleSelectItinerary = async (itinerary) => {
 
       if (!routes || routes.length === 0) continue;
 
-      const route = routes[0];
+      let route = routes[0];
+
+      if (!route?.geometry?.coordinates?.length && route?.route_id) {
+        const geometries = await loadRouteGeometries(fetchApi, selectedCity);
+        const geometry = geometries.get(route.route_id);
+        if (geometry) route = { ...route, geometry };
+      }
 
       if (!route?.geometry?.coordinates?.length) continue;
 
