@@ -68,7 +68,7 @@ const LoginPage = () => {
         <img
           src={tituloMovilidad}
           alt="Movilidad"
-          className="h-[120px] w-auto object-contain"
+          className="h-[120px] w-auto object-contain max-sm:min-w-0"
         />
       </div>
 

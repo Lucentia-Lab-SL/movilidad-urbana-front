@@ -7,7 +7,7 @@ const AccessDenied = () => {
       className="flex-1 flex items-center justify-center bg-cover bg-center"
       style={{ backgroundImage: `url(${bg})` }}
     >
-      <div className="bg-white backdrop-blur-md border border-border rounded-2xl p-8 shadow-[var(--shadow-card)] text-center max-w-md w-full">
+      <div className="bg-white backdrop-blur-md border border-border rounded-2xl p-8 shadow-[var(--shadow-card)] text-center max-w-md w-full max-sm:mx-4 max-sm:p-6">
 
         {/* Icono */}
         <div className="flex justify-center mb-5">

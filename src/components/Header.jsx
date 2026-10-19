@@ -52,25 +52,25 @@ const Header = () => {
   };
 
   return (
-    <header className="h-16 flex items-center justify-between px-6 bg-card border-b border-border shrink-0">
+    <header className="h-16 flex items-center justify-between px-6 bg-card border-b border-border shrink-0 max-md:h-auto max-md:flex-wrap max-md:gap-x-3 max-md:gap-y-2 max-md:py-2 max-sm:px-3">
       <div
         onClick={() => navigate("/mapa")}
-        className="flex items-center gap-2 cursor-pointer"
+        className="flex items-center gap-2 cursor-pointer max-md:shrink-0"
       >
         <img src={logo} alt="Movilidad" className="h-8 w-auto object-contain" />
-        <span className="text-lg font-bold text-foreground tracking-tight">
+        <span className="text-lg font-bold text-foreground tracking-tight max-sm:text-base">
           Movilidad Urbana
         </span>
       </div>
 
-      <nav className="hidden md:flex items-center gap-1">
+      <nav className="hidden md:flex items-center gap-1 max-md:flex max-md:order-last max-md:w-full max-md:empty:hidden">
         {NAV_ITEMS.map((item) => {
           const active = location.pathname === item.path;
           return (
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150 ${
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150 max-md:flex-1 max-md:px-2 max-md:leading-tight ${
                 active
                   ? "bg-verde text-white"
                   : "text-verde hover:text-foreground hover:bg-verde-claro"
@@ -82,16 +82,16 @@ const Header = () => {
         })}
       </nav>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 max-md:min-w-0 max-md:flex-1 max-md:justify-end max-md:gap-3">
         <button
           onClick={() => navigate("/perfil")}
-          className="text-sm text-muted-foreground hover:text-accent transition-colors"
+          className="text-sm text-muted-foreground hover:text-accent transition-colors max-md:min-w-0 max-md:truncate"
         >
           Hola, <span className="font-medium text-foreground">{user}</span>
         </button>
         <button
           onClick={handleLogout}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-destructive hover:opacity-80 transition-opacity duration-150"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-destructive hover:opacity-80 transition-opacity duration-150 max-md:shrink-0"
         >
           <LogOut className="w-4 h-4" />
           Salir

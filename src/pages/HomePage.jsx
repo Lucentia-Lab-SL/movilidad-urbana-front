@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { getAuthUser, loadJSON, saveJSON } from "@/utils/storage";
 import { toast } from "sonner";
 import Header from "@/components/Header";
@@ -322,6 +322,15 @@ if (!segments.length) {
     }
   }, [authUser, hasAccess]);
 
+  // En pantallas pequeñas el mapa queda debajo del panel de filtros:
+  // al pintar un itinerario se desplaza la vista hasta el mapa y su tarjeta.
+  const mapColumnRef = useRef(null);
+  useEffect(() => {
+    if (!routeResult) return;
+    if (!window.matchMedia("(max-width: 1023px)").matches) return;
+    mapColumnRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [routeResult]);
+
 // Hace reverse geocoding sobre una coordenada para mostrar información legible
 // cuando el usuario pulsa sobre un punto libre del mapa
 const getPointInfo = async (lat, lng) => {
@@ -459,7 +468,7 @@ const getPointInfo = async (lat, lng) => {
       <Header />
 
       <div
-        className="px-6 py-6"
+        className="px-6 py-6 max-sm:px-4 max-sm:py-4"
         style={{
           background:
             "linear-gradient(180deg, hsl(218 70% 14% / 0.06) 0%, transparent 100%)",
@@ -471,12 +480,12 @@ const getPointInfo = async (lat, lng) => {
         </p>
       </div>
 
-      <div className="px-6 pb-2">
+      <div className="px-6 pb-2 max-sm:px-4">
         {apiError && <p className="text-sm text-red-500">Error backend: {apiError}</p>}
       </div>
 
-      <div className="flex-1 min-w-0 flex gap-4 p-4 overflow-hidden relative">
-        <aside className="w-[440px] shrink-0 bg-card border border-border rounded-lg p-5 flex flex-col gap-6 overflow-y-auto shadow-[var(--shadow-card)]">
+      <div className="flex-1 min-w-0 flex gap-4 p-4 overflow-hidden relative max-lg:flex-col max-sm:gap-3 max-sm:p-3">
+        <aside className="w-[440px] shrink-0 bg-card border border-border rounded-lg p-5 flex flex-col gap-6 overflow-y-auto shadow-[var(--shadow-card)] max-lg:w-full max-sm:p-4">
         
           <RoutesPanel
             selectedCity={selectedCity}
@@ -497,9 +506,10 @@ const getPointInfo = async (lat, lng) => {
         </aside>
 
         <div
-          className="flex-1 min-h-0 min-w-0 flex flex-col gap-3 overflow-x-hidden overflow-y-auto"
+          ref={mapColumnRef}
+          className="flex-1 min-h-0 min-w-0 flex flex-col gap-3 overflow-x-hidden overflow-y-auto max-lg:flex-none"
         >
-          <div className="relative w-full min-w-0 flex-1 min-h-[220px] bg-card border border-border rounded-lg shadow-[var(--shadow-card)] overflow-hidden">
+          <div className="relative w-full min-w-0 flex-1 min-h-[220px] bg-card border border-border rounded-lg shadow-[var(--shadow-card)] overflow-hidden max-lg:flex-none max-lg:h-[420px] max-sm:h-[340px]">
           <MapView
             places={visiblePlaces}   
             routeResult={routeResult}
@@ -516,7 +526,7 @@ const getPointInfo = async (lat, lng) => {
 
           />
           {selectedPoint && !routeResult && (
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[60%] max-w-md bg-card border border-border rounded-xl shadow-lg p-4 flex items-center justify-between z-[100]">
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[60%] max-w-md bg-card border border-border rounded-xl shadow-lg p-4 flex items-center justify-between z-[100] max-sm:w-[calc(100%-1.5rem)]">
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-foreground">
                 {selectedPoint.name}
@@ -607,12 +617,12 @@ const getPointInfo = async (lat, lng) => {
               const colorClass = MODE_COLORS[mode] || "text-azul border-azul";
 
               return (
-                <div key={index} className={`flex min-w-0 items-stretch ${index === 0 ? "max-w-[min(100%,220px)] flex-[1_1_180px]" : "max-w-[min(100%,284px)] flex-[1_1_244px]"}`}>
+                <div key={index} className={`flex min-w-0 items-stretch max-sm:max-w-none max-sm:basis-full max-sm:flex-col ${index === 0 ? "max-w-[min(100%,220px)] flex-[1_1_180px]" : "max-w-[min(100%,284px)] flex-[1_1_244px]"}`}>
 
                   {index > 0 && (
-                    <div className="flex w-16 shrink-0 flex-col items-center justify-center px-1 text-center text-[11px] leading-tight text-muted-foreground">
-                      <Icon className={`mb-1 h-4 w-4 ${colorClass.split(" ")[0]}`} />
-                      <span className={`mb-1 w-8 border-t-2 border-dotted ${colorClass.split(" ")[1]}`} />
+                    <div className="flex w-16 shrink-0 flex-col items-center justify-center px-1 text-center text-[11px] leading-tight text-muted-foreground max-sm:w-full max-sm:flex-row max-sm:gap-2 max-sm:px-0 max-sm:py-1.5">
+                      <Icon className={`mb-1 h-4 w-4 max-sm:mb-0 ${colorClass.split(" ")[0]}`} />
+                      <span className={`mb-1 w-8 border-t-2 border-dotted max-sm:mb-0 ${colorClass.split(" ")[1]}`} />
                       <span>
                         {travelMinutes < 60
                           ? `${travelMinutes} min`
