@@ -24,7 +24,7 @@ const MODE_LABELS = {
   * permite elegir ciudad, modos, fecha y hora
   * lanza la búsqueda de itinerarios
  */
-const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, itineraryLegs, itinerariesLoading, itinerariesError, onLoadItineraries, onSelectItinerary, places, selectedPlaceIds, onChangeSelectedPlaceIds, onChangeRouteDate, }) => {
+const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, itineraryLegs, itinerariesLoading, itinerariesError, onLoadItineraries, onSelectItinerary, places, selectedPlaceIds, onChangeSelectedPlaceIds, onChangeRouteDate, selectedItineraryId, }) => {
   const [modes, setModes] = useState(["good"]);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
@@ -348,6 +348,8 @@ const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, it
                         .join(", ")
                       : "Sin modo";
 
+                  const isSelected = selectedItineraryId != null && it.itinerary_id === selectedItineraryId;
+
                   return (
                     <button
                       key={it.itinerary_id || index}
@@ -359,7 +361,7 @@ const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, it
                         });
                       }}
                       className={`w-full text-left rounded-xl border p-3 transition-all ${
-                        index === 0
+                        isSelected
                           ? "border-verde-oscuro bg-verde-claro/20"
                           : "border-border bg-card hover:bg-secondary"
                       }`}

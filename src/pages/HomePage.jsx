@@ -491,7 +491,8 @@ const getPointInfo = async (lat, lng) => {
             places={places}
             selectedPlaceIds={selectedPlaceIds}
             onChangeSelectedPlaceIds={setSelectedPlaceIds}
-            onChangeRouteDate={setSelectedRouteDate}  
+            onChangeRouteDate={setSelectedRouteDate}
+            selectedItineraryId={selectedItineraryDetail?.itinerary_id}
           />
         </aside>
 
