@@ -102,7 +102,7 @@ const AforosPanel = () => {
   // boton "ver aforos"
   const handleViewAforos = () => {
     if (!selectedCity || !selectedDate || !selectedHour) {
-      alert("Selecciona ciudad, fecha y hora antes de ver los aforos.");
+      alert("Selecciona destino, fecha y hora antes de ver los aforos.");
       return;
     }
 
@@ -131,13 +131,13 @@ const AforosPanel = () => {
         <div className="rounded-xl bg-[#9ADE88]/30 border border-[#5B8B6C]/40 h-[48px] px-3 flex items-center gap-2">
           <MapPin className="w-5 h-5 text-[#5B8B6C]" />
           <div className="flex-1 flex flex-col justify-center">
-            <label className="text-xs text-[#5B8B6C]">Provincia</label>
+            <label className="text-xs text-[#5B8B6C]">Destino</label>
             <select
               value={selectedCity}
               onChange={(e) => setSelectedCity(e.target.value)}
               className="w-full bg-transparent font-medium text-sm outline-none cursor-pointer text-[#0E448F]"
             >
-              <option value="">Selecciona provincia</option>
+              <option value="">Selecciona destino</option>
               {availableCities.map((city) => (
                 <option key={city.value} value={city.value}>
                   {city.label}
@@ -272,7 +272,7 @@ const AforoTable = ({ rows, hour, searched }) => (
           {!searched && (
             <tr>
               <td colSpan={3} className="px-4 py-6 text-slate-500">
-                Selecciona provincia, fecha y hora para ver la predicción.
+                Selecciona destino, fecha y hora para ver la predicción.
               </td>
             </tr>
           )}

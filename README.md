@@ -300,7 +300,7 @@ Cada deploy crea una release nueva y conserva la anterior. La CLI imprime la URL
 
 1. El login con Google te lleva a `/mapa` (o a `/zonas` si solo tienes aforos).
 2. `/mapa`: elige ciudad y filtros (prueba **Peñíscola**) y pulsa *Buscar itinerarios*. El primero del ranking queda marcado y se dibuja en el mapa, con su tarjeta justo debajo y sin scroll interno. Pulsa otro itinerario: cambian la marca y la ruta.
-3. `/zonas`: el desplegable de provincia tiene opciones y la tabla *Predicción de aforos* se rellena. La alerta de alta afluencia solo aparece si algún distrito llega a 2000 personas.
+3. `/zonas`: el desplegable de destino tiene opciones y la tabla *Predicción de aforos* se rellena. La alerta de alta afluencia solo aparece si algún distrito llega a 2000 personas.
 4. El pie con los logos de financiación aparece en todas las páginas.
 5. Reduce la ventana por debajo de 1024 px y de 640 px: el diseño se apila y no hay scroll horizontal.
 6. La consola del navegador no muestra errores de red ni de CORS.
