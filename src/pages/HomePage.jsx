@@ -475,7 +475,7 @@ const getPointInfo = async (lat, lng) => {
         {apiError && <p className="text-sm text-red-500">Error backend: {apiError}</p>}
       </div>
 
-      <div className="flex-1 flex gap-4 p-4 overflow-hidden relative">
+      <div className="flex-1 min-w-0 flex gap-4 p-4 overflow-hidden relative">
         <aside className="w-[440px] shrink-0 bg-card border border-border rounded-lg p-5 flex flex-col gap-6 overflow-y-auto shadow-[var(--shadow-card)]">
         
           <RoutesPanel
@@ -496,7 +496,10 @@ const getPointInfo = async (lat, lng) => {
           />
         </aside>
 
-        <div className="flex-1 bg-card border border-border rounded-lg shadow-[var(--shadow-card)] overflow-hidden relative">
+        <div
+          className="flex-1 min-h-0 min-w-0 flex flex-col gap-3 overflow-x-hidden overflow-y-auto"
+        >
+          <div className="relative w-full min-w-0 flex-1 min-h-[220px] bg-card border border-border rounded-lg shadow-[var(--shadow-card)] overflow-hidden">
           <MapView
             places={visiblePlaces}   
             routeResult={routeResult}
@@ -512,6 +515,31 @@ const getPointInfo = async (lat, lng) => {
             selectedDate={selectedRouteDate}
 
           />
+          {selectedPoint && !routeResult && (
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[60%] max-w-md bg-card border border-border rounded-xl shadow-lg p-4 flex items-center justify-between z-[100]">
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold text-foreground">
+                {selectedPoint.name}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {selectedPoint.address}
+              </span>
+              <span className="text-xs text-azul mt-1">
+                {selectedPoint.lat.toFixed(6)}, {selectedPoint.lng.toFixed(6)}
+              </span>
+            </div>
+
+            <button
+              onClick={() => {
+                setSelectedPoint(null);
+              }}
+              className="ml-auto text-base text-muted-foreground hover:text-destructive transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+          )}
+          </div>
         {/* tarjeta detalle itinerario horizontal */}
         {selectedItineraryDetail && (() => {
           const selectedLegs = itineraryLegs
@@ -519,7 +547,7 @@ const getPointInfo = async (lat, lng) => {
             .sort((a, b) => (a.leg_seq || 0) - (b.leg_seq || 0));
 
             return (
-          <div className="absolute left-4 right-4 bottom-4 z-[1000] bg-card border border-border rounded-2xl shadow-xl p-4 max-h-[430px] overflow-y-auto">
+          <div className="w-full min-w-0 shrink-0 bg-card border border-border rounded-2xl shadow-[var(--shadow-card)] p-3">
 
             {/* HEADER */}
             <div className="flex items-start justify-between gap-4 mb-4">
@@ -552,20 +580,20 @@ const getPointInfo = async (lat, lng) => {
             </div>
 
             {/* TIMELINE */}
-            <div className="mt-4 flex items-stretch gap-4 overflow-x-auto pb-2">      {(selectedItineraryDetail.visit_order_names || "")
+            <div className="mt-3 flex w-full min-w-0 flex-wrap items-stretch gap-y-3">{(selectedItineraryDetail.visit_order_names || "")
                 .split("→")
                 .map((s) => s.trim())
                 .filter(Boolean)
-                .map((stop, index, arr) => {
+                .map((stop, index) => {
                   const leg = selectedLegs[index];
-                const nextLeg = selectedLegs[index + 1];
+                  const prevLeg = selectedLegs[index - 1];
 
                 const travelMinutes =
-                  leg?.visit_end_time && nextLeg?.arrival_time
+                  prevLeg?.visit_end_time && leg?.arrival_time
                     ? Math.max(
                         0,
                         Math.round(
-                          (new Date(nextLeg.arrival_time) - new Date(leg.visit_end_time)) / 60000
+                          (new Date(leg.arrival_time) - new Date(prevLeg.visit_end_time)) / 60000
                         )
                       )
                     : 0;
@@ -574,39 +602,50 @@ const getPointInfo = async (lat, lng) => {
                 (p) => p.name?.toLowerCase().trim() === stop.toLowerCase().trim()
               );
 
-              const mode = nextLeg?.mode_selected || selectedItineraryDetail.modes_used?.[index] || "bike";
+              const mode = leg?.mode_selected || selectedItineraryDetail.modes_used?.[index - 1] || "bike";
               const Icon = MODE_ICONS[mode] || Bike;
               const colorClass = MODE_COLORS[mode] || "text-azul border-azul";
 
               return (
-                <div key={index} className="flex items-center gap-4 shrink-0">
+                <div key={index} className={`flex min-w-0 items-stretch ${index === 0 ? "max-w-[min(100%,220px)] flex-[1_1_180px]" : "max-w-[min(100%,284px)] flex-[1_1_244px]"}`}>
 
-                  {/* CARD COMPLETA */}
-                  <div className="w-[190px] min-w-[190px] rounded-xl border border-border bg-white p-3 shadow-sm">
+                  {index > 0 && (
+                    <div className="flex w-16 shrink-0 flex-col items-center justify-center px-1 text-center text-[11px] leading-tight text-muted-foreground">
+                      <Icon className={`mb-1 h-4 w-4 ${colorClass.split(" ")[0]}`} />
+                      <span className={`mb-1 w-8 border-t-2 border-dotted ${colorClass.split(" ")[1]}`} />
+                      <span>
+                        {travelMinutes < 60
+                          ? `${travelMinutes} min`
+                          : `${Math.floor(travelMinutes / 60)} h ${travelMinutes % 60} min`}
+                      </span>
+                      <span>
+                        {Math.round(((leg?.cost_distance_m || 0) / 1000) * 10) / 10} km
+                      </span>
+                    </div>
+                  )}
 
-                    {/* IMG */}
+                  <div className="min-w-0 flex-1 rounded-xl border border-border bg-white p-2 shadow-sm">
+
                     <div className="relative">
                       <img
                         src={place?.img || "/placeholder-place.jpg"}
-                        className="w-full h-20 rounded-lg object-cover"
+                        alt=""
+                        className="h-12 w-full rounded-lg object-cover"
                       />
 
-                      <div className="absolute -top-2 -left-2 w-6 h-6 rounded-full bg-verde-oscuro text-white flex items-center justify-center text-xs font-bold">
+                      <div className="absolute -top-2 -left-2 flex h-6 w-6 items-center justify-center rounded-full bg-verde-oscuro text-xs font-bold text-white">
                         {String.fromCharCode(65 + index)}
                       </div>
                     </div>
 
-                    {/* NAME */}
-                    <p className="mt-2 text-xs font-semibold text-foreground">
+                    <p className="mt-2 line-clamp-2 break-words text-xs font-semibold text-foreground">
                       {stop}
                     </p>
 
-                    {/* INFO */}
-                    <div className="mt-3 text-[11px] space-y-2">
+                    <div className="mt-2 space-y-1.5 text-[11px]">
 
-                      {/* Llegada */}
                       <div
-                        className={`rounded-lg px-2 py-1.5 flex items-center gap-2 ${
+                        className={`flex items-center gap-1.5 rounded-lg px-2 py-1 ${
                           index === 0
                             ? "bg-green-50 text-verde-oscuro"
                             : "bg-blue-50 text-azul"
@@ -614,22 +653,19 @@ const getPointInfo = async (lat, lng) => {
                       >
                         <span>🕘</span>
                         <span className="font-semibold">
-                          Llegada{" "}
-                          {leg?.arrival_time?.slice(11, 16) || "--:--"}
+                          Llegada {leg?.arrival_time?.slice(11, 16) || "--:--"}
                         </span>
                       </div>
 
-                      {/* Visita */}
-                      <div className="border-t border-border pt-2 flex flex-col items-center text-muted-foreground">
+                      <div className="flex flex-col items-center border-t border-border pt-1.5 text-center text-muted-foreground">
                         <span>👁 Tiempo de visita</span>
-                        <span className="text-foreground font-semibold mt-1">
+                        <span className="mt-0.5 font-semibold text-foreground">
                           {leg?.visit_start_time?.slice(11, 16) || "--:--"} - {leg?.visit_end_time?.slice(11, 16) || "--:--"}
                         </span>
                       </div>
 
-                      {/* Salida */}
                       <div
-                        className={`rounded-lg px-2 py-1.5 flex items-center gap-2 ${
+                        className={`flex items-center gap-1.5 rounded-lg px-2 py-1 ${
                           index === 0
                             ? "bg-green-50 text-verde-oscuro"
                             : "bg-blue-50 text-azul"
@@ -642,30 +678,13 @@ const getPointInfo = async (lat, lng) => {
                       </div>
                     </div>
                   </div>
-
-                  {/* CONECTOR */}
-                  {index < arr.length - 1 && (
-                    <div className="w-[110px] flex flex-col items-center text-xs text-muted-foreground">
-                      <Icon className={`w-5 h-5 mb-1 ${colorClass.split(" ")[0]}`} />
-                      <div className={`w-full border-t-2 border-dotted mb-1 ${colorClass.split(" ")[1]}`} />
-                      <span>
-                        {travelMinutes < 60
-                          ? `${travelMinutes} min`
-                          : `${Math.floor(travelMinutes / 60)} h ${travelMinutes % 60} min`}                      
-                      </span>
-
-                      <span>
-                        {Math.round(((selectedLegs[index + 1]?.cost_distance_m || 0) / 1000) * 10) / 10} km
-                      </span>
-                    </div>
-                  )}
-                    </div>
-                  );
+                </div>
+              );
                 })}
               </div>
 
             {/* RESUMEN INFERIOR */}
-            <div className="mt-4 rounded-xl bg-verde-claro/10 border border-verde-claro/40 p-3 grid grid-cols-4 gap-4 text-xs">
+            <div className="mt-1 grid grid-cols-2 gap-3 rounded-xl border border-verde-claro/40 bg-verde-claro/10 p-3 text-xs sm:grid-cols-4">
               <div>
                 <p className="text-muted-foreground">Hora de inicio</p>
                 <p className="font-semibold">{(selectedItineraryDetail.start_datetime || "").slice(11, 16)}</p>
@@ -693,32 +712,6 @@ const getPointInfo = async (lat, lng) => {
           </div>
         );
       })()}
-
-        
-       {selectedPoint && !routeResult &&(
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[60%] max-w-md bg-card border border-border rounded-xl shadow-lg p-4 flex items-center justify-between z-[100]">
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold text-foreground">
-                {selectedPoint.name}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {selectedPoint.address}
-              </span>
-              <span className="text-xs text-azul mt-1">
-                {selectedPoint.lat.toFixed(6)}, {selectedPoint.lng.toFixed(6)}
-              </span>
-            </div>
-
-            <button
-              onClick={() => {
-                setSelectedPoint(null);
-              }}
-              className="ml-auto text-base text-muted-foreground hover:text-destructive transition-colors"
-            >
-              ✕
-            </button>
-          </div>
-        )}
       </div>
     </div>
   </div>

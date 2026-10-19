@@ -13,6 +13,22 @@ import "leaflet-polylinedecorator";
  */
 const SHOW_GRAPH_DEBUG = false;
 
+function fitRouteToMap(map, routeResult) {
+  const layers = [];
+
+  (routeResult?.segments || []).forEach((segment) => {
+    if (!segment?.geometry?.coordinates?.length) return;
+    layers.push(L.geoJSON(segment.geometry));
+  });
+
+  if (!layers.length) return;
+
+  const bounds = L.featureGroup(layers).getBounds();
+  if (!bounds.isValid()) return;
+
+  map.fitBounds(bounds, { padding: [28, 28], maxZoom: 15 });
+}
+
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
@@ -203,6 +219,8 @@ const MapView = ({
   const mapRef = useRef(null);
   const containerRef = useRef(null);
   const layersRef = useRef(L.layerGroup());
+  const routeResultRef = useRef(routeResult);
+  routeResultRef.current = routeResult;
 
   const CITY_VIEWS = {
     alicante: { center: [38.3452, -0.481], zoom: 13 },
@@ -240,8 +258,19 @@ const MapView = ({
     layersRef.current.addTo(map);
     mapRef.current = map;
 
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        map.invalidateSize();
+        fitRouteToMap(map, routeResultRef.current);
+      });
+    });
+    observer.observe(containerRef.current);
+
     // Limpia el mapa al desmontar
     return () => {
+      observer.disconnect();
       map.remove();
       mapRef.current = null;
     };
@@ -365,11 +394,8 @@ useEffect(() => {
     const bounds = featureGroup.getBounds();
 
     if (bounds.isValid()) {
-    map.fitBounds(bounds, {
-      paddingTopLeft: [80, 80],
-      paddingBottomRight: [80, 360],
-      maxZoom: 15,
-    });
+    map.invalidateSize();
+    fitRouteToMap(map, routeResult);
   }
 }
 }
@@ -403,7 +429,7 @@ useEffect(() => {
     ).addTo(group);
   }
 }, [places, routeResult, routeMode, zones, tempZone, isDrawingZone, onLoadPlaceHours, itineraryStops]);
-  return <div ref={containerRef} className="w-full h-full min-h-[400px] rounded-lg" />;
+  return <div ref={containerRef} className="w-full h-full min-h-0 rounded-lg" />;
 };
 
 export default MapView;
