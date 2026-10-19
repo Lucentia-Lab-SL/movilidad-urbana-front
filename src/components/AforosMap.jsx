@@ -16,7 +16,7 @@ const getColor = (personas) => {
   return "#ffffcc";
 };
 
-const AforosMap = ({ city, date, hour }) => {
+const AforosMap = ({ city, date, hour, onLoaded }) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const geoJsonLayerRef = useRef(null);
@@ -46,7 +46,16 @@ const AforosMap = ({ city, date, hour }) => {
         if (!city || !date || !hour || !mapInstanceRef.current) return;
 
       // llamada a api para cargar geojson de distritos (según ciudad, dia y hora)
-      const geojson = await fetchApi(`/distritos/aforos?city=${city}&date=${date}&hour=${hour}`, {}, true);
+      let geojson;
+      try {
+        geojson = await fetchApi(`/distritos/aforos?city=${city}&date=${date}&hour=${hour}`, {}, true);
+      } catch (err) {
+        onLoaded?.({ features: [] });
+        setError(err.message || "No se han podido cargar los aforos");
+        return;
+      }
+
+      onLoaded?.(geojson);
 
       // control de error de backend
       if (geojson.error) {
@@ -113,7 +122,7 @@ const AforosMap = ({ city, date, hour }) => {
     };
 
     loadDistricts();
-  }, [city, date, hour, fetchApi]);
+  }, [city, date, hour, fetchApi, onLoaded]);
 
   return (
     <div className="relative w-full h-full">

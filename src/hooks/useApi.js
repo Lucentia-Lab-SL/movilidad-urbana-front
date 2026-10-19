@@ -1,18 +1,30 @@
 import { useCallback } from "react";
+import { auth } from "@/lib/firebase";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
+async function getFirebaseToken() {
+  const user = auth.currentUser;
+  if (user) {
+    const token = await user.getIdToken();
+    localStorage.setItem("firebaseToken", token);
+    return token;
+  }
+  return localStorage.getItem("firebaseToken");
+}
+
 export const useApi = () => {
   const fetchApi = useCallback(async (endpoint, options = {}, authRequired = false) => {
-    const token = localStorage.getItem("firebaseToken");
-    
     const headers = {
       "Content-Type": "application/json",
       ...(options.headers || {}),
     };
 
-    if (authRequired && token) {
-      headers.Authorization = `Bearer ${token}`;
+    if (authRequired) {
+      const token = await getFirebaseToken();
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
     }
 
     const res = await fetch(`${API_URL}${endpoint}`, {
@@ -21,7 +33,14 @@ export const useApi = () => {
     });
 
     if (!res.ok) {
-      throw new Error(`Error API: ${res.status}`);
+      let detail = "";
+      try {
+        const body = await res.json();
+        if (body?.detail) detail = `: ${body.detail}`;
+      } catch {
+        // La respuesta de error no siempre es JSON.
+      }
+      throw new Error(`Error API: ${res.status}${detail}`);
     }
 
     const contentType = res.headers.get("content-type");

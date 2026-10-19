@@ -10,6 +10,7 @@ import RoutesListPage from "./pages/RoutesListPage";
 import AforosPage from "./pages/AforosPage";
 import NotFound from "./pages/NotFound";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import Footer from "@/components/Footer";
 
 const queryClient = new QueryClient();
 
@@ -33,7 +34,9 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-            {/* Protegemos rutas */}          <Routes>
+          <div className="min-h-screen flex flex-col">
+            <div className="flex-1 flex flex-col min-h-0">
+            <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/mapa" element={<PrivateRoute><HomePage /></PrivateRoute>} />
@@ -42,6 +45,9 @@ const App = () => (
             <Route path="/perfil" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+            </div>
+            <Footer />
+          </div>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

@@ -43,7 +43,7 @@ const LoginPage = () => {
 
  return (
   <div
-    className="min-h-screen flex items-center justify-center relative overflow-hidden bg-center bg-cover bg-no-repeat"
+    className="flex-1 flex items-center justify-center relative overflow-hidden bg-center bg-cover bg-no-repeat"
     style={{ backgroundImage: `url(${fondoCiudad})` }}
   >
     {/* overlay */}

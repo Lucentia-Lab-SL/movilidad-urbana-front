@@ -26,7 +26,7 @@ const AforosPage = () => {
     navigate("/mapa");
   };
 return (
-  <div className="min-h-screen flex flex-col bg-background">
+  <div className="flex-1 flex flex-col min-h-0 bg-background">
     <Header />
 
     <div className="flex-1 px-6 py-5 w-full max-w-[1500px] mx-auto">

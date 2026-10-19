@@ -8,6 +8,8 @@ import { useApi } from "@/hooks/useApi";
 import AccessDenied from "@/pages/AccessDenied";
 import { Car, Footprints, Bike, BusFront } from "lucide-react";
 
+// Las rutas de Peñíscola están guardadas con la eñe descompuesta (n + tilde).
+const cityForApi = (city) => (city === "peniscola" ? "pen\u0303iscola" : city);
 
 const HomePage = () => {
   const authUser = getAuthUser();
@@ -86,7 +88,7 @@ const loadItineraries = async (date, time, modes, selectedPlaceIds) => {
     : `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   
     const params = new URLSearchParams({
-      city: selectedCity,
+      city: cityForApi(selectedCity),
       fecha_inicio: fechaInicio,
       hora_inicio: horaInicio,
       max_itineraries: "30",
@@ -263,7 +265,7 @@ if (!segments.length) {
   useEffect(() => {
     if (!allowedZones || allowedZones.length === 0) return;
 
-    const allCities = ["alicante", "elche", "valencia", "peñiscola"];
+    const allCities = ["alicante", "elche", "valencia", "peniscola"];
 
     const availableCities = allowedZones.includes("*")
       ? allCities
@@ -385,7 +387,7 @@ const getPointInfo = async (lat, lng) => {
   // Pantalla carga mientras se valida el acceso del usuario
   if (accessLoading) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="flex-1 flex items-center justify-center bg-background">
       <p className="text-sm text-muted-foreground">Comprobando acceso...</p>
     </div>
   );
@@ -424,7 +426,7 @@ const getPointInfo = async (lat, lng) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="flex-1 flex flex-col min-h-0 bg-background">
       <Header />
 
       <div

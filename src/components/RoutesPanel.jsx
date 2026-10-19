@@ -73,7 +73,7 @@ const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, it
     { value: "alicante", label: "Alicante" },
     { value: "elche", label: "Elche" },
     { value: "valencia", label: "Valencia" },
-    { value: "peñiscola", label: "Peñíscola" },
+    { value: "peniscola", label: "Peñíscola" },
   ];
 
   // Ciudades que se mostrarán en el desplegable según lo contratado

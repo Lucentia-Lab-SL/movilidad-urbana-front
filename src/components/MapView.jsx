@@ -208,7 +208,7 @@ const MapView = ({
     alicante: { center: [38.3452, -0.481], zoom: 13 },
     elche: { center: [38.2699, -0.7126], zoom: 13 },
     valencia: { center: [39.4699, -0.3763], zoom: 13 },
-    peñiscola: { center: [40.3574, 0.4069], zoom: 13 },
+    peniscola: { center: [40.3574, 0.4069], zoom: 13 },
   };
 
   //mover el mapa 
@@ -254,7 +254,7 @@ useEffect(() => {
   const map = mapRef.current;
   if (!map) return;
 
-  const cities = ["alicante", "elche", "valencia", "peñiscola"];
+  const cities = ["alicante", "elche", "valencia", "peniscola"];
     let graphLayers = [];
 
   const loadGraphs = async () => {

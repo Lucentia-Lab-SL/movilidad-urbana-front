@@ -99,7 +99,7 @@ const ProfilePage = () => {
   .toUpperCase();
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="flex-1 flex flex-col min-h-0 bg-background">
       <Header />
 
       <div className="flex-1 flex items-start justify-center px-4 py-10">

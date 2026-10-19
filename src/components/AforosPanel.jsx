@@ -1,35 +1,26 @@
 import { MapPin, CalendarDays, Clock, AlertTriangle, Users, TrendingUp } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import AforosMap from "@/components/AforosMap";
 import { useApi } from "@/hooks/useApi";
 
-// Datos ficticios para las tablas
-const aforosTiempoReal = [
-  { distrito: "Centro", nivel: "Alto", hora: "15:00" },
-  { distrito: "Playa", nivel: "Muy Alto", hora: "15:00" },
-  { distrito: "Montaña", nivel: "Medio", hora: "15:00" },
-];
+const getAforoClass = (personas) => {
+  if (personas > 10000) return "bg-red-950 text-white";
+  if (personas > 5000) return "bg-red-700 text-white";
+  if (personas > 2000) return "bg-red-500 text-white";
+  if (personas > 1000) return "bg-orange-400 text-white";
+  if (personas > 500) return "bg-orange-300 text-orange-950";
+  if (personas > 200) return "bg-yellow-300 text-yellow-950";
+  return "bg-yellow-100 text-yellow-950";
+};
 
-const aforosPrediccion = [
-  { distrito: "Centro", nivel: "Muy Alto", hora: "17:00" },
-  { distrito: "Playa", nivel: "Alto", hora: "17:00" },
-  { distrito: "Montaña", nivel: "Medio", hora: "17:00" },
-];
-
-// Función para los colores de los niveles de volumen de personas
-const getNivelClass = (nivel) => {
-  switch (nivel) {
-    case "Muy Alto":
-      return "bg-red-900 text-red-100";
-    case "Alto":
-      return "bg-red-500 text-white";
-    case "Medio":
-      return "bg-orange-500 text-white";
-    case "Bajo":
-      return "bg-yellow-400 text-yellow-950";
-    default:
-      return "bg-[#9ADE88]/40 text-[#0E448F]";
-  }
+const districtLabel = (properties = {}) => {
+  const name =
+    properties.NOMBRE ||
+    properties.nombre ||
+    properties.NAME ||
+    properties.name ||
+    properties.DISTRITO;
+  return name || properties.ID || "—";
 };
 
 const ALL_CITIES = [
@@ -38,6 +29,27 @@ const ALL_CITIES = [
   { value: "elche", label: "Elche" },
   { value: "peniscola", label: "Peñíscola" },
 ];
+
+const normalizeCity = (text = "") =>
+  text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+const citiesFromAccess = (access) => {
+  const distritos = access?.allowedDistritos || [];
+  const zones = access?.allowedZones || [];
+  const source = distritos.length > 0 ? distritos : zones;
+
+  if (source.includes("*")) return ALL_CITIES;
+
+  return ALL_CITIES.filter((city) =>
+    source.some((zone) => {
+      const normalized = normalizeCity(zone);
+      return normalized === normalizeCity(city.value) || normalized === normalizeCity(city.label);
+    })
+  );
+};
 
 // Estados de los filtros seleccionados (ciudad, fecha, hora) y el botón para aplicar los filtros y mostrar el mapa con los datos correspondientes
 const AforosPanel = () => {
@@ -53,22 +65,31 @@ const AforosPanel = () => {
     date: "",
     hour: "",
   });
+  const [predictionRows, setPredictionRows] = useState([]);
+
+  const handleDistrictsLoaded = useCallback((geojson) => {
+    const features = geojson?.features || [];
+    const rows = features
+      .map((feature, index) => {
+        const properties = feature.properties || {};
+        const personas = Number(properties.personas_estimadas) || 0;
+        const distrito = String(districtLabel(properties));
+        return {
+          id: `${distrito}-${index}`,
+          distrito,
+          personas,
+        };
+      })
+      .sort((a, b) => b.personas - a.personas || a.distrito.localeCompare(b.distrito, "es"));
+
+    setPredictionRows(rows);
+  }, []);
 
   useEffect(() => {
   const loadAccess = async () => {
     try {
       const access = await fetchApi("/me/access", {}, true);
-      const allowedDistritos = access.allowedDistritos || [];
-
-      if (allowedDistritos.includes("*")) {
-        setAvailableCities(ALL_CITIES);
-      } else {
-        setAvailableCities(
-          ALL_CITIES.filter((city) =>
-            allowedDistritos.includes(city.value)
-          )
-        );
-      }
+      setAvailableCities(citiesFromAccess(access));
     } catch (error) {
       console.error("Error cargando ciudades de aforos:", error);
       setAvailableCities([]);
@@ -86,6 +107,7 @@ const AforosPanel = () => {
     }
 
     // Aplicamos filtros y mostramos en el mapa
+    setPredictionRows([]);
     setAppliedFilters({
       city: selectedCity,
       date: selectedDate,
@@ -170,6 +192,7 @@ const AforosPanel = () => {
             city={appliedFilters.city}
             date={appliedFilters.date}
             hour={appliedFilters.hour}
+            onLoaded={handleDistrictsLoaded}
           />
         </div>
 
@@ -198,85 +221,87 @@ const AforosPanel = () => {
             </div>
           </div>
 
-          {/* ALERTA */}
-          <div className="rounded-2xl border-l-4 border-yellow-500 bg-yellow-100/70 p-4 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <AlertTriangle className="w-5 h-5 text-yellow-500" />
-              <h3 className="text-sm font-semibold text-yellow-800">
-                Zonas con alta afluencia
-              </h3>
-            </div>
+          {predictionRows.some((row) => row.personas >= 2000) && (
+            <div className="rounded-2xl border-l-4 border-yellow-500 bg-yellow-100/70 p-4 shadow-sm">
+              <div className="flex items-center gap-3 mb-2">
+                <AlertTriangle className="w-5 h-5 text-yellow-500" />
+                <h3 className="text-sm font-semibold text-yellow-800">
+                  Zonas con alta afluencia
+                </h3>
+              </div>
 
-            <p className="text-sm text-yellow-800/80">
-              Existen zonas con niveles de aforo altos. Se recomienda extremar precauciones.
-            </p>
-          </div>
+              <p className="text-sm text-yellow-800/80">
+                Existen zonas con niveles de aforo altos. Se recomienda extremar precauciones.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* TABLAS */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <AforoTable
-          title="Aforos Descriptivos (Tiempo Real)"
-          icon={<Users className="w-4 h-4 text-[#1A6BAB]" />}
-          rows={aforosTiempoReal}
-          prediction={false}
-        />
-
-        <AforoTable
-          title="Predicción de Aforos"
-          icon={<TrendingUp className="w-4 h-4 text-[#1A6BAB]" />}
-          rows={aforosPrediccion}
-          prediction
-        />
-      </div>
+      <AforoTable
+        rows={predictionRows}
+        hour={appliedFilters.hour}
+        searched={Boolean(appliedFilters.city)}
+      />
 
       <p className="text-xs text-slate-500">
-        Los datos son estimaciones y pueden variar. Última actualización general: 20/05/2025 15:00
+        Los datos son estimaciones y pueden variar. Última actualización general: 10/10/2026
       </p>
     </div>
   );
 };
 
-// Componenete tabla
-const AforoTable = ({ title, icon, rows, prediction }) => (
+const AforoTable = ({ rows, hour, searched }) => (
   <div className="rounded-2xl border border-[#9ADE88]/60 bg-[#EEF8E9] overflow-hidden shadow-md">
     <div className="px-4 py-3 border-b border-[#9ADE88]/60 bg-[#DFF2D4] flex items-center gap-2">
-      {icon}
-      <h3 className="text-sm font-semibold text-[#0E448F]">{title}</h3>
+      <TrendingUp className="w-4 h-4 text-[#1A6BAB]" />
+      <h3 className="text-sm font-semibold text-[#0E448F]">Predicción de aforos</h3>
     </div>
 
-    {/* TABLA */}
-    <table className="w-full text-sm">
-      <thead className="bg-[#CDEAC0] text-[#0E448F]">
-        <tr>
-          <th className="text-left px-4 py-3">Distrito</th>
-          <th className="text-left px-4 py-3">
-            {prediction ? "Nivel previsto" : "Nivel de aforo"}
-          </th>
-          <th className="text-left px-4 py-3">Hora</th>
-        </tr>
-      </thead>
-
-      <tbody>
-        {rows.map((row) => (
-          <tr
-            key={`${row.distrito}-${row.hora}`}
-            className="border-t border-[#D6E5DB]/70 hover:bg-[#9ADE88]/10 transition-colors"
-          >
-            <td className="px-4 py-3">{row.distrito}</td>
-
-            <td className="px-4 py-3">
-              <span className={`px-3 py-1 rounded-md text-xs font-semibold ${getNivelClass(row.nivel)}`}>
-                {row.nivel}
-              </span>
-            </td>
-
-            <td className="px-4 py-3">{row.hora}</td>
+    <div className="max-h-[420px] overflow-y-auto">
+      <table className="w-full text-sm">
+        <thead className="bg-[#CDEAC0] text-[#0E448F] sticky top-0">
+          <tr>
+            <th className="text-left px-4 py-3">Distrito</th>
+            <th className="text-left px-4 py-3">Nivel de aforo</th>
+            <th className="text-left px-4 py-3">Hora</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+
+        <tbody>
+          {!searched && (
+            <tr>
+              <td colSpan={3} className="px-4 py-6 text-slate-500">
+                Selecciona provincia, fecha y hora para ver la predicción.
+              </td>
+            </tr>
+          )}
+
+          {searched && rows.length === 0 && (
+            <tr>
+              <td colSpan={3} className="px-4 py-6 text-slate-500">
+                No hay distritos para esa selección.
+              </td>
+            </tr>
+          )}
+
+          {rows.map((row) => (
+            <tr
+              key={row.id}
+              className="border-t border-[#D6E5DB]/70 hover:bg-[#9ADE88]/10 transition-colors"
+            >
+              <td className="px-4 py-3">{row.distrito}</td>
+              <td className="px-4 py-3">
+                <span className={`inline-block min-w-16 px-3 py-1 rounded-md text-xs font-semibold text-center ${getAforoClass(row.personas)}`}>
+                  {Math.round(row.personas).toLocaleString("es-ES")}
+                </span>
+              </td>
+              <td className="px-4 py-3">{hour}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   </div>
 );
 
