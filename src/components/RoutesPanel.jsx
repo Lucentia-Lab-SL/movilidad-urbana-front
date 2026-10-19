@@ -212,10 +212,10 @@ const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, it
           </div>
         </div>
               
-        {/* DESTINO */}
+        {/* PROVINCIA */}
         <div className="flex flex-col gap-1">
           <label className="text-xs font-semibold text-foreground uppercase tracking-wide">
-            Destino
+            Provincia
           </label>
           <select
             value={selectedCity}
@@ -227,7 +227,7 @@ const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, it
                       focus:outline-none focus:ring-2 focus:ring-azul/30 hover:border-azul/40"
           >
             <option value="" disabled>
-              Selecciona destino
+              Selecciona provincia
             </option>
             
             {availableCities.map((city) => (
