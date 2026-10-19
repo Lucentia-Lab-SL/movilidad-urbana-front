@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Route as RouteIcon, Car, Footprints, Bike, BusFront, Sparkles } from "lucide-react";
+import { sortItinerariesByDuration } from "@/utils/itineraries";
 
 // Modulos de transporte disponibles 
 // automático: busca los mejores itinerarios sin filtrar por transporte.
@@ -150,9 +151,7 @@ const RoutesPanel = ({ selectedCity, onChangeCity, allowedZones, itineraries, it
   };
 
   //ordenar ranking: duración total de menor a mayor
-  const sortedItineraries = [...(itineraries || [])].sort(
-    (a, b) => (a.total_time_min || 999999) - (b.total_time_min || 999999)
-  );
+  const sortedItineraries = sortItinerariesByDuration(itineraries);
 
   // Búsqueda solo si hay fecha y hora
   // No hay: botón desactivado

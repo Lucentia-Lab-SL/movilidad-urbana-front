@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import MapView from "@/components/MapView";
 import RoutesPanel from "@/components/RoutesPanel";
 import { useApi } from "@/hooks/useApi";
+import { sortItinerariesByDuration } from "@/utils/itineraries";
 import AccessDenied from "@/pages/AccessDenied";
 import { Car, Footprints, Bike, BusFront } from "lucide-react";
 
@@ -69,6 +70,13 @@ const HomePage = () => {
   const [itineraryStops, setItineraryStops] = useState([]);
   const [itineraryLegs, setItineraryLegs] = useState([]);
   const [selectedItineraryDetail, setSelectedItineraryDetail] = useState(null);
+
+  // Identifica la última búsqueda/selección de itinerario. Si mientras se pintan
+  // los tramos el usuario elige otro itinerario, cambia de ciudad o busca de nuevo,
+  // el resultado anterior se descarta para que no pise al más reciente.
+  const selectionRunRef = useRef(0);
+  // Indica que la selección en curso es automática (primer itinerario tras buscar).
+  const skipScrollRef = useRef(false);
   
   // Ciudad actualmente seleccionada en el panel.
   const [selectedCity, setSelectedCity] = useState("");
@@ -94,6 +102,8 @@ const HomePage = () => {
 
 // cargar itinerarios desde el back segun fecha, hora, ciudad y modos
 const loadItineraries = async (date, time, modes, selectedPlaceIds) => {
+  // Cualquier selección anterior que siga en curso deja de ser válida.
+  const searchRun = ++selectionRunRef.current;
   try {
     setItinerariesLoading(true);
     setItinerariesError("");
@@ -141,6 +151,14 @@ const loadItineraries = async (date, time, modes, selectedPlaceIds) => {
     console.log("MODOS ENVIADOS:", modes);
     console.log("PRIMER ITINERARIO:", data?.itineraries?.[0]);
     console.log("LEGS:", data?.legs);
+
+    // Por defecto se marca el primero del ranking (el de menor duración) y se
+    // pinta en el mapa. Si el usuario ha hecho algo mientras buscaba (cambiar de
+    // ciudad o elegir otro itinerario), se respeta y no se marca nada.
+    const [firstItinerary] = sortItinerariesByDuration(data.itineraries);
+    if (firstItinerary && searchRun === selectionRunRef.current) {
+      await handleSelectItinerary({ ...firstItinerary, uiIndex: 1 }, { auto: true });
+    }
   } catch (err) {
     console.error("Error cargando itinerarios:", err);
     setItinerariesError("Error al cargar itinerarios. Inténtalo más tarde");
@@ -164,8 +182,12 @@ const normalizeText = (text) =>
   * busca sus lugares reales en el array de places
   * construye los segmentos uno a uno consultando /routes/search
   * genera la estructura final que MapView necesita para pintarlo
+ * Tras una búsqueda se llama también de forma automática con el primero
+ * del ranking ({ auto: true }).
  */
-const handleSelectItinerary = async (itinerary) => {
+const handleSelectItinerary = async (itinerary, { auto = false } = {}) => {
+  // Esta selección pasa a ser la vigente; las anteriores que sigan en curso se descartan.
+  const run = ++selectionRunRef.current;
   try {
     setSelectedItineraryDetail(itinerary);
     if (!itinerary?.visit_order_names) {
@@ -205,6 +227,9 @@ const handleSelectItinerary = async (itinerary) => {
 
     // Recorre cada tramo entre dos paradas consecutivas del itinerario.
     for (let i = 0; i < matchedPlaces.length - 1; i++) {
+      // Si ya hay una selección más reciente, no se siguen pidiendo tramos.
+      if (run !== selectionRunRef.current) return;
+
       const fromPlace = matchedPlaces[i];
       const toPlace = matchedPlaces[i + 1];
 
@@ -242,6 +267,8 @@ const handleSelectItinerary = async (itinerary) => {
           }
 
 
+if (run !== selectionRunRef.current) return;
+
 if (!segments.length) {
   toast.error("No se pudo pintar el itinerario");
   return;
@@ -261,12 +288,15 @@ if (!segments.length) {
       duration: Math.round(totalDurationS / 60),
     };
 
+    // La selección automática tras buscar no desplaza la vista hasta el mapa
+    // (en pantallas pequeñas el usuario se quedaría sin ver el ranking).
+    if (auto) skipScrollRef.current = true;
     handleRouteCalculated(result, itinerary.modes_used?.[0] || "drive");
 
-    toast.success("Itinerario cargado en el mapa");
+    if (!auto) toast.success("Itinerario cargado en el mapa");
   } catch (error) {
     console.error("Error pintando itinerario:", error);
-    toast.error("Error al pintar el itinerario");
+    if (run === selectionRunRef.current) toast.error("Error al pintar el itinerario");
   }
 };
   // Carga de lugares desde el backend
@@ -327,6 +357,10 @@ if (!segments.length) {
   const mapColumnRef = useRef(null);
   useEffect(() => {
     if (!routeResult) return;
+    if (skipScrollRef.current) {
+      skipScrollRef.current = false;
+      return;
+    }
     if (!window.matchMedia("(max-width: 1023px)").matches) return;
     mapColumnRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [routeResult]);
@@ -440,6 +474,8 @@ const getPointInfo = async (lat, lng) => {
   }
 
   const handleChangeCity = (city) => {
+    // Invalida cualquier selección de itinerario que siga en curso.
+    selectionRunRef.current += 1;
     setSelectedCity(city);
     setSelectedPlaceIds([]);
     setRouteResult(null);
